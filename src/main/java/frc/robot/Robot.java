@@ -4,8 +4,6 @@
 
 package frc.robot;
 
-import java.lang.reflect.Proxy;
-
 import com.ctre.phoenix.motorcontrol.can.*;
 import edu.wpi.first.wpilibj.*;
 
