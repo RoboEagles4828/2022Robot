@@ -10,6 +10,6 @@ public class Shooter {
     }
 
     public void set_speed(double speed){
-        shooter.set(speed);
+        shooter.set(speed*-1);
     }
 }
