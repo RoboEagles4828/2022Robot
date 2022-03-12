@@ -8,16 +8,24 @@ public class DriveTrain {
     private MotorControllerGroup left;
     private MotorControllerGroup right;
     private DifferentialDrive dt;
-    public DriveTrain(WPI_TalonFX front_left, WPI_TalonFX back_left, WPI_TalonFX front_right, WPI_TalonFX back_right){
+    public WPI_TalonFX front_left = new WPI_TalonFX(Constants.front_left_port);
+    public WPI_TalonFX back_left = new WPI_TalonFX(Constants.back_left_port);
+    public WPI_TalonFX front_right = new WPI_TalonFX(Constants.front_right_port);
+    public WPI_TalonFX back_right = new WPI_TalonFX(Constants.back_right_port);
+    public DriveTrain(){
         left = new MotorControllerGroup(front_left, back_left);
         right = new MotorControllerGroup(front_right, back_right);
         dt = new DifferentialDrive(left, right);
 
-        left.setInverted(true);
-        right.setInverted(false);
+        left.setInverted(false);
+        right.setInverted(true);
     }
 
     public void set_speeds(double xSpeed, double zRotation){
         dt.arcadeDrive(xSpeed, zRotation);
+    }
+
+    public void stop(){
+        dt.arcadeDrive(0, 0);
     }
 }

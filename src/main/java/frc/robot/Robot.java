@@ -4,13 +4,18 @@
 
 package frc.robot;
 
-import com.ctre.phoenix.motorcontrol.can.*;
+import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+//import edu.wpi.first.wpilibj.CounterBase;
 
 public class Robot extends TimedRobot {
-  DriveTrain dt = new DriveTrain(new WPI_TalonFX(Constants.front_left_port), new WPI_TalonFX(Constants.back_left_port),
-                       new WPI_TalonFX(Constants.front_right_port), new WPI_TalonFX(Constants.back_right_port));
 
+  DriveTrain dt = new DriveTrain();
+  
+  //ErrorCode error =  front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
+  
   Shooter shooter = new Shooter();
   boolean manual_shooter = false;
 
@@ -26,6 +31,81 @@ public class Robot extends TimedRobot {
   Joystick joystick_0 = new Joystick(Constants.joystick_0_port);
   Joystick joystick_1 = new Joystick(Constants.joystick_1_port);
 
+  static final String DefaultAuto = "Default";
+  static final String CustomAuto = "Drive, Intake, Shoot";
+  SendableChooser<String> chooser = new SendableChooser<>();
+  String autoSelected;
+  Timer timer = new Timer();
+
+  double starting_pos = 0;
+  int auto_state = 0;
+  double start_time = 0;
+
+  @Override
+  public void robotInit(){
+    chooser.setDefaultOption("Default Auto", DefaultAuto);
+    chooser.addOption("Drive, Intake, Shoot", CustomAuto);
+    SmartDashboard.putData("Auto Choices:", chooser);
+    CameraServer.startAutomaticCapture();
+    CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
+    //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature
+  }
+
+  @Override
+  public void autonomousInit(){
+    autoSelected=chooser.getSelected();
+    System.out.println("Auto selected: " + autoSelected);
+    timer.reset();
+    timer.start();
+    starting_pos=dt.front_left.getSelectedSensorPosition();
+  }
+
+  @Override
+  public void autonomousPeriodic(){
+    //If ball detected make conveyor move to pull it
+    if(prox_lower.get()){
+      conveyor.set_speed(Constants.index_conveyor_speed);
+    }else{//If ball is not detected, conveyor will stop
+      conveyor.stop();
+    }
+
+    //If ball is detected by upper proxy stop conveyor
+    if(prox_upper.get()){
+      conveyor.stop();
+    }
+
+    //Determine what auto to run
+    switch(autoSelected){
+      case CustomAuto:
+          switch(auto_state){
+            case 0:
+              if(Autonomous.intake_drive(Constants.wall_to_ball, intake, dt, starting_pos, 1)){
+                starting_pos=dt.front_left.getSelectedSensorPosition();
+                auto_state++;
+              }
+              break;
+            case 1:
+              if(Autonomous.drive(Constants.wall_to_ball, dt, starting_pos, -1)){
+                starting_pos=dt.front_left.getSelectedSensorPosition();
+                start_time=timer.get();
+                auto_state++;
+              }
+              break;
+            case 2:
+              if(Autonomous.shoot(Constants.wall_shoot_time, start_time, timer.get(), shooter)){auto_state++;}
+              break;
+            default:
+              break;
+          }
+        break;
+      case DefaultAuto://Start flush with wall and just shoot
+        if(Autonomous.shoot(Constants.wall_shoot_time, 0, timer.get(), shooter)){break;}
+        break;
+      default:
+        if(Autonomous.shoot(Constants.wall_shoot_time, 0, timer.get(), shooter)){break;}
+        break;
+    }
+  }
   @Override
   public void teleopInit() {
     /* factory default values */
@@ -44,56 +124,68 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     double xSpeed = joystick_0.getRawAxis(1) * -1; // make forward stick positive
-    double zRotation = joystick_0.getRawAxis(2) * -1; // WPI Drivetrain uses positive=> right
+    double zRotation = joystick_0.getRawAxis(2); // WPI Drivetrain uses positive=> right
 
     dt.set_speeds(xSpeed, zRotation);
-
+    System.out.println(dt.front_left.getSelectedSensorPosition());
     //If ball detected make conveyor move to pull it
-    if(prox_lower.get()){
-      conveyor.set_speed(Constants.conveyor_speed);
+    /*if(prox_lower.get()){
+      conveyor.set_speed(Constants.index_conveyor_speed);
     }else if(!manual_conveyor){//If ball is not detected, so long as it is not under manual control conveyor will stop
-      conveyor.set_speed(0);
+      conveyor.stop();
     }
 
     //If ball is detected by upper proxy stop conveyor
     if(prox_upper.get()&&!manual_shooter){
-      conveyor.set_speed(0);
-    }
+      conveyor.stop();
+    }*/
 
     //Manually control shooter
-    if (joystick_0.getRawButton(1)){
-      shooter.set_speed(Constants.shooter_speed);
+    if (joystick_0.getRawButton(Constants.manual_shoot_button)){
+      shooter.set_speed(Constants.manual_shooter_speed);
       manual_shooter = true;
     }
 
     //Stop shooter when not manually controlled
-    if (joystick_0.getRawButtonReleased(1)){
-      shooter.set_speed(0);
+    if (joystick_0.getRawButtonReleased(Constants.manual_shoot_button)){
+      shooter.stop();
       manual_shooter = false;
     }
     
     //Manually control intake
-    if (joystick_0.getRawButton(2)){
-      intake.set_speed(Constants.intake_speed);
+    if (joystick_0.getRawButton(Constants.manual_intake_button)){
+      intake.set_speed(Constants.manual_intake_speed);
       manual_intake = true;
     }
 
     //Stop intake when not manually controlled
-    if (joystick_0.getRawButtonReleased(2)){
-      intake.set_speed(0);
+    if (joystick_0.getRawButtonReleased(Constants.manual_intake_button)){
+      intake.stop();
       manual_intake = false;
     }
 
     //Manually control conveyor
-    if (joystick_0.getRawButton(3)){
-      conveyor.set_speed(Constants.conveyor_speed);
+    if (joystick_0.getRawButton(Constants.manual_conveyor_button)){
+      conveyor.set_speed(Constants.manual_conveyor_speed);
       manual_conveyor = true;
     }
 
     //Stop conveyor when not manually controlled
-    if (joystick_0.getRawButtonReleased(3)){
+    if (joystick_0.getRawButtonReleased(Constants.manual_conveyor_button)){
       manual_conveyor = false;
-      conveyor.set_speed(0);
+      conveyor.stop();
+    }
+
+    //Manually control conveyor backwards
+    if (joystick_0.getRawButton(Constants.manual_conveyor_back_button)){
+      conveyor.set_speed(Constants.manual_conveyor_back_speed);
+      manual_conveyor = true;
+    }
+
+    //Stop conveyor when not manually controlled
+    if (joystick_0.getRawButtonReleased(Constants.manual_conveyor_back_button)){
+      manual_conveyor = false;
+      conveyor.stop();
     }
   }
 }
