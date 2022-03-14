@@ -24,6 +24,38 @@ public class Autonomous {
         return false;
     }
 
+    public static boolean intake_drive(double distance, Intake intake, DriveTrain dt, double starting_pos, int dir, boolean stop){
+        double dist = distance*Constants.encoder_ratio;
+        dt.set_speeds(Constants.auto_drive_speed*dir, 0);
+        intake.set_speed(Constants.auto_intake_speed);
+        if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)>=dist){
+            dt.stop();
+            if(stop){
+                intake.stop();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean intake(double time, double start_time, double current_time, Intake intake){
+        intake.set_speed(Constants.auto_intake_speed);
+        if(current_time-start_time>=time){
+            intake.stop();
+            return true;
+        }
+        return false;
+    }
+    //I dont know which is better, have to test
+    public static boolean intake(double time, Intake intake, Conveyor conveyor){
+        intake.set_speed(Constants.auto_intake_speed);
+        if(conveyor.conveyor.get()!=0){
+            intake.stop();
+            return true;
+        }
+        return false;
+    } 
+
     public static boolean shoot(double time, double start_time, double current_time, Shooter shooter){
         shooter.set_speed(Constants.wall_shooter_speed);
         if(current_time-start_time>=time){
