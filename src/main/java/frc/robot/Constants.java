@@ -19,7 +19,7 @@ public class Constants{
     public static int left_climber_port = 20;
     public static int right_climber_port = 17;
 
-    public static int servo_port = 10;
+    public static int servo_port = 9;
     
     public static int joystick_0_port = 0;
     public static int joystick_1_port = 1;
@@ -42,8 +42,6 @@ public class Constants{
     public static double auto_intake_speed = 0.5;
     public static double auto_field_shoot_speed = 1.0;
 
-    public static double servo_open_value = 0;
-
     //Buttons
     public static int manual_shoot_button = 1;
     
@@ -62,7 +60,7 @@ public class Constants{
 
     public static int servo_switch_button = 12;
     
-    public static double encoder_ratio = 1350;//Number of raw values per inch
+    public static double encoder_ratio = 1375;//Number of raw values per inch
 
     //Auto Distances/Values
     public static double wall_to_ball = 133.375;//Distance from wall to ball in straight line
@@ -70,4 +68,5 @@ public class Constants{
     public static double conveyor_delay = 2;
     public static double intake_ball_time = 2;
     public static double ball_to_wall = 180;//Distance from ball to wall, higher because pushes against wall to become flush
+    public static double stop_dt_time = 0.25;
 }

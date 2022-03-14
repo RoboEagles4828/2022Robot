@@ -47,7 +47,7 @@ public class Robot extends TimedRobot {
   AHRS navx = new AHRS();
 
   static final String DefaultAuto = "Default";
-  static final String BasicAuto = "Drive, Intake, Shoot";
+  static final String BasicAuto = "DriveShoot";
   static final String DriveAuto = "Drive";
   SendableChooser<String> chooser = new SendableChooser<>();
   String autoSelected;
@@ -62,14 +62,14 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit(){
     chooser.setDefaultOption("Default Auto", DefaultAuto);
-    chooser.addOption("Drive, Intake, Shoot", BasicAuto);
-    chooser.addOption("Drive", DriveAuto);
+    chooser.addOption("Basic Auto", BasicAuto);
+    chooser.addOption("Drive Auto", DriveAuto);
     SmartDashboard.putData("Auto Choices:", chooser);
     CameraServer.startAutomaticCapture();
     //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature
     dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
-    navx.calibrate();
+    //navx.calibrate();
   }
 
   @Override
@@ -79,7 +79,14 @@ public class Robot extends TimedRobot {
     timer.reset();
     timer.start();
     starting_pos=dt.front_left.getSelectedSensorPosition();
-    intake_servo.set(Constants.servo_open_value);
+    intake_servo.set(1);
+    auto_state=0;
+    conveyor_speed=0;
+    intake_speed=0;
+    shooter_speed=0;
+    xSpeed=0;
+    zRotation=0;
+    stop_time=0;
   }
 
   @Override
@@ -132,9 +139,11 @@ public class Robot extends TimedRobot {
             case 3:
               if(timer.get()-start_time<Constants.wall_shoot_time){
                 shooter_speed=Constants.wall_shooter_speed;
-                conveyor_speed=Constants.manual_conveyor_speed;
+                if(timer.get()-start_time>Constants.conveyor_delay){
+                  conveyor_speed=Constants.manual_conveyor_speed;
+                  manual_conveyor=true;
+                }
                 manual_shooter=true;
-                manual_conveyor=true;
               }else{
                 auto_state++;
                 manual_shooter=false;
@@ -148,18 +157,25 @@ public class Robot extends TimedRobot {
       case DriveAuto:
           switch(auto_state){
             case 0:
-              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<120){
+              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<360*Constants.encoder_ratio){
                 xSpeed=Constants.auto_drive_speed;
               }else{
                 auto_state++;
-                //stop_time=timer.get();
+                stop_time=timer.get();
                 xSpeed=0;
               }
               break;
-            default:
-              //dt.stop(timer.get()-stop_time);
+            case 1:
+              if(timer.get()-stop_time<Constants.stop_dt_time){
+                xSpeed=-0.5;
+              }else{
+                auto_state++;
+              }
               break;
+            case 2:
+              xSpeed=0;
           }
+        break;
       case DefaultAuto://Start flush with wall and just shoot
         if(timer.get()<Constants.wall_shoot_time){
           shooter_speed=Constants.wall_shooter_speed;
@@ -254,7 +270,11 @@ public class Robot extends TimedRobot {
     }
 
     if(joystick_1.getRawButtonPressed(Constants.servo_switch_button)){
-      intake_servo.set(Constants.servo_open_value);
+      if(intake_servo.get()>0){
+        intake_servo.set(0);
+      }else{
+        intake_servo.set(1);
+      }
     }
     
     //Manually control intake

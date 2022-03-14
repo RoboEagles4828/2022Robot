@@ -25,14 +25,6 @@ public class DriveTrain {
         dt.arcadeDrive(xSpeed, zRotation);
     }
 
-    public void stop(double time){
-        if(time > 0.5){
-            dt.arcadeDrive(0, 0);
-        }else{
-            dt.arcadeDrive(-0.25, 0);
-        }
-    }
-
     public void stop(){
         dt.arcadeDrive(0, 0);
     }
