@@ -95,7 +95,7 @@ public class Robot extends TimedRobot {
       case BasicAuto:
           switch(auto_state){
             case 0:
-              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.wall_to_ball){
+              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.wall_to_ball*Constants.encoder_ratio){
                 xSpeed=Constants.auto_drive_speed;
                 intake_speed=Constants.auto_intake_speed;
               }else{
@@ -114,7 +114,7 @@ public class Robot extends TimedRobot {
               }
               break;
             case 2:
-              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.ball_to_wall){
+              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.ball_to_wall*Constants.encoder_ratio){
                 xSpeed = -Constants.auto_drive_speed;
               }else{
                 xSpeed=0;
