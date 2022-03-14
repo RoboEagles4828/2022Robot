@@ -5,6 +5,7 @@
 package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
+import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.*;
@@ -38,8 +39,12 @@ public class Robot extends TimedRobot {
   DigitalInput prox_lower = new DigitalInput(Constants.proxy_lower);
   DigitalInput prox_upper = new DigitalInput(Constants.proxy_upper);
 
+  Servo intake_servo = new Servo(Constants.servo_port);
+
   Joystick joystick_0 = new Joystick(Constants.joystick_0_port);
   Joystick joystick_1 = new Joystick(Constants.joystick_1_port);
+
+  AHRS navx = new AHRS();
 
   static final String DefaultAuto = "Default";
   static final String BasicAuto = "Drive, Intake, Shoot";
@@ -64,6 +69,7 @@ public class Robot extends TimedRobot {
     //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature
     dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
+    navx.calibrate();
   }
 
   @Override
@@ -73,6 +79,7 @@ public class Robot extends TimedRobot {
     timer.reset();
     timer.start();
     starting_pos=dt.front_left.getSelectedSensorPosition();
+    intake_servo.set(Constants.servo_open_value);
   }
 
   @Override
@@ -244,6 +251,10 @@ public class Robot extends TimedRobot {
       manual_conveyor=false;
       shooter_speed=0;
       conveyor_speed=0;
+    }
+
+    if(joystick_1.getRawButtonPressed(Constants.servo_switch_button)){
+      intake_servo.set(Constants.servo_open_value);
     }
     
     //Manually control intake
