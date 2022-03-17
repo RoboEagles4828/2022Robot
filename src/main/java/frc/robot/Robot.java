@@ -22,6 +22,7 @@ public class Robot extends TimedRobot {
   Shooter shooter = new Shooter();
   boolean manual_shooter = false;
   double shooter_speed = 0;
+  boolean detected = false;
 
   Conveyor conveyor = new Conveyor();
   boolean manual_conveyor = false;
@@ -66,7 +67,7 @@ public class Robot extends TimedRobot {
     chooser.addOption("Drive Auto", DriveAuto);
     SmartDashboard.putData("Auto Choices:", chooser);
     CameraServer.startAutomaticCapture();
-    //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
+    CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature
     dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
     //navx.calibrate();
@@ -204,6 +205,8 @@ public class Robot extends TimedRobot {
     intake_speed=0;
     shooter_speed=0;
     conveyor_speed=0;
+    timer.reset();
+    timer.start();
     /* factory default values */
     /*_talonL.configFactoryDefault();
     _talonR.configFactoryDefault();*/
@@ -220,13 +223,12 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     xSpeed = joystick_1.getRawAxis(1) * -1; // make forward stick positive
-    zRotation = joystick_1.getRawAxis(0); // WPI Drivetrain uses positive=> right
-
+    zRotation = joystick_1.getRawAxis(2)*0.4; // WPI Drivetrain uses positive=> right
     //If ball detected make conveyor move to pull it
     if(prox_lower.get()){
       conveyor_speed=Constants.index_conveyor_speed;
       conveyor_index_time=timer.get();
-    }else if(!manual_conveyor&&timer.get()-conveyor_index_time>0.25){//If ball is not detected, so long as it is not under manual control conveyor will stop
+    }else if(!manual_conveyor&&timer.get()-conveyor_index_time>0.3){//If ball is not detected, so long as it is not under manual control conveyor will stop
       conveyor_speed=0;//Greater than 0.25 seconds since detecting a ball
     }
 
@@ -247,18 +249,26 @@ public class Robot extends TimedRobot {
       shooter_speed=0;
     }
 
+    if(joystick_1.getRawButtonPressed(Constants.manual_shoot_button)){
+      start_time=timer.get();
+    }
+
     //Manually control shooter
     if (joystick_1.getRawButton(Constants.manual_shoot_button)){
       shooter_speed=Constants.manual_shooter_speed;
-      if(timer.get()-start_time>=0.5){
+      if(timer.get()-start_time>=1){
         conveyor_speed=Constants.conveyor_shoot_speed;
         manual_conveyor=true;
+      }else{
+        conveyor_speed=0;
+        manual_conveyor=false;
       }
+      /*if(!detected&&prox_upper.get()){
+        detected=true;
+      }else if(!prox_upper.get()&&detected){
+        start_time=timer.get();
+      }*/
       manual_shooter = true;
-    }
-
-    if(joystick_1.getRawButtonPressed(Constants.manual_shoot_button)){
-      start_time=timer.get();
     }
 
     //Stop shooter when not manually controlled
@@ -267,6 +277,8 @@ public class Robot extends TimedRobot {
       manual_conveyor=false;
       shooter_speed=0;
       conveyor_speed=0;
+      start_time=0;
+      detected=false;
     }
 
     if(joystick_1.getRawButtonPressed(Constants.servo_switch_button)){
@@ -284,6 +296,16 @@ public class Robot extends TimedRobot {
 
     //Stop intake when not manually controlled
     if (joystick_0.getRawButtonReleased(Constants.manual_intake_button)){
+      intake_speed=0;
+    }
+
+    //Manually control intake
+    if (joystick_1.getRawButton(Constants.manual_intake_button_1)){
+      intake_speed=Constants.manual_intake_speed;
+    }
+
+    //Stop intake when not manually controlled
+    if (joystick_1.getRawButtonReleased(Constants.manual_intake_button_1)){
       intake_speed=0;
     }
 
@@ -333,7 +355,8 @@ public class Robot extends TimedRobot {
 
     //Manually control climber
     if (joystick_0.getRawButton(Constants.manual_climber_button)){
-      climber_speed = Constants.manual_climber_speed;
+      left_climber_speed = Constants.manual_left_climber_speed_up;
+      right_climber_speed = Constants.manual_right_climber_speed_up;
       state=0;
     }
 
@@ -345,19 +368,21 @@ public class Robot extends TimedRobot {
 
     //Manually control climber backwards
     if (joystick_0.getRawButton(Constants.manual_rev_climber_button)){
-      climber_speed = -Constants.manual_climber_speed;
+      left_climber_speed = -Constants.manual_left_climber_speed_down;
+      right_climber_speed= -Constants.manual_right_climber_speed_down;
       state=0;
     }
 
     //Stop climber when not manually controlled backwards
     if (joystick_0.getRawButtonReleased(Constants.manual_rev_climber_button)){
-      climber_speed=0;
+      left_climber_speed=0;
+      right_climber_speed=0;
       state=0;
     }
 
     //Manually control left climber
     if (joystick_0.getRawButton(Constants.manual_left_climber_button)){
-      left_climber_speed = Constants.manual_left_climber_speed;
+      left_climber_speed = Constants.manual_left_climber_speed_up;
       state=1;
     }
 
@@ -369,7 +394,7 @@ public class Robot extends TimedRobot {
 
     //Manually control left climber backwards
     if (joystick_0.getRawButton(Constants.manual_rev_left_climber_button)){
-      left_climber_speed = -Constants.manual_left_climber_speed;
+      left_climber_speed = -Constants.manual_left_climber_speed_down;
       state=1;
     }
 
@@ -381,7 +406,7 @@ public class Robot extends TimedRobot {
     
     //Manually control right climber
     if (joystick_0.getRawButton(Constants.manual_right_climber_button)){
-      right_climber_speed = Constants.manual_right_climber_speed;
+      right_climber_speed = Constants.manual_right_climber_speed_up;
       state=2;
     }
 
@@ -393,7 +418,7 @@ public class Robot extends TimedRobot {
 
     //Manually control right climber backwards
     if (joystick_0.getRawButton(Constants.manual_rev_right_climber_button)){
-      right_climber_speed = -Constants.manual_right_climber_speed;
+      right_climber_speed = -Constants.manual_right_climber_speed_down;
       state=2;
     }
 
@@ -410,7 +435,7 @@ public class Robot extends TimedRobot {
     intake.set_speed(intake_speed);
 
     if(state==0){
-      climber.set_speeds(climber_speed);
+      climber.set_speeds(left_climber_speed, right_climber_speed);
     }else if(state==1){
       climber.set_speeds(left_climber_speed,0);
     }else if(state==2){

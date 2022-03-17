@@ -25,7 +25,7 @@ public class Constants{
     public static int joystick_1_port = 1;
 
     //Speeds
-    public static double manual_shooter_speed = 0.87;///When manually controlled
+    public static double manual_shooter_speed = 0.60;///When manually controlled
     public static double wall_shooter_speed = 0.87;//Flush against wall shooting
 
     public static double index_conveyor_speed = 0.5;
@@ -34,9 +34,12 @@ public class Constants{
 
     public static double manual_intake_speed = 0.7;
 
-    public static double manual_climber_speed = 1.0;
-    public static double manual_left_climber_speed = 1.0;
-    public static double manual_right_climber_speed = 1.0;
+    public static double manual_climber_speed_up = 0.8;
+    public static double manual_climber_speed_down = 0.8;
+    public static double manual_left_climber_speed_up = 0.7;
+    public static double manual_left_climber_speed_down = 0.9;
+    public static double manual_right_climber_speed_up = 0.6;
+    public static double manual_right_climber_speed_down = 0.8;
 
     public static double auto_drive_speed = 0.60;
     public static double auto_intake_speed = 0.5;
@@ -46,6 +49,7 @@ public class Constants{
     public static int manual_shoot_button = 1;
     
     public static int manual_intake_button = 2;
+    public static int manual_intake_button_1 = 11;
     public static int manual_rev_intake_button = 5;
 
     public static int manual_conveyor_button = 3;
