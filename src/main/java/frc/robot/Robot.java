@@ -23,6 +23,7 @@ public class Robot extends TimedRobot {
   boolean manual_shooter = false;
   double shooter_speed = 0;
   boolean detected = false;
+  double high_low = Constants.manual_shooter_speed_high;
 
   Conveyor conveyor = new Conveyor();
   boolean manual_conveyor = false;
@@ -32,15 +33,20 @@ public class Robot extends TimedRobot {
   double intake_speed = 0;
 
   Climber climber = new Climber();
-  double climber_speed = 0;
   double left_climber_speed = 0;
   double right_climber_speed = 0;
+  boolean left_can_climb = true;//Hall effects allow to climb up on left
+  boolean right_can_climb = true;//Hall effects allow to climb up on right
   int state = 0;//0 is both, 1 is left, 2 is right
 
   DigitalInput prox_lower = new DigitalInput(Constants.proxy_lower);
   DigitalInput prox_upper = new DigitalInput(Constants.proxy_upper);
+  DigitalInput hall_left = new DigitalInput(Constants.hall_left);
+  DigitalInput hall_right = new DigitalInput(Constants.hall_right);
 
-  Servo intake_servo = new Servo(Constants.servo_port);
+  Servo intake_servo = new Servo(Constants.intake_servo_port);
+  PWM shooter_servo_0 = new PWM(Constants.shooter_servo_0_port);
+  PWM shooter_servo_1 = new PWM(Constants.shooter_servo_1_port);
 
   Joystick joystick_0 = new Joystick(Constants.joystick_0_port);
   Joystick joystick_1 = new Joystick(Constants.joystick_1_port);
@@ -50,11 +56,14 @@ public class Robot extends TimedRobot {
   static final String DefaultAuto = "Default";
   static final String BasicAuto = "DriveShoot";
   static final String DriveAuto = "Drive";
+  static final String BottomBallAuto = "BottomBallAuto";//Climbing area is "top" part
+  static final String TopBallAuto = "TopBallAuto";
   SendableChooser<String> chooser = new SendableChooser<>();
   String autoSelected;
   Timer timer = new Timer();
   double starting_pos = 0;
   int auto_state = 0;
+  double auto_start_time = 0;//Only used for auto shooting
   double start_time = 0;//starting time for auto and recycled for auto shoot time
 
   double stop_time = 0;//stop drive time
@@ -65,6 +74,8 @@ public class Robot extends TimedRobot {
     chooser.setDefaultOption("Default Auto", DefaultAuto);
     chooser.addOption("Basic Auto", BasicAuto);
     chooser.addOption("Drive Auto", DriveAuto);
+    chooser.addOption("Top Ball Auto", TopBallAuto);
+    chooser.addOption("Bottom Ball Auto", BottomBallAuto);
     SmartDashboard.putData("Auto Choices:", chooser);
     CameraServer.startAutomaticCapture();
     CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
@@ -88,6 +99,7 @@ public class Robot extends TimedRobot {
     xSpeed=0;
     zRotation=0;
     stop_time=0;
+    navx.reset();
   }
 
   @Override
@@ -107,19 +119,111 @@ public class Robot extends TimedRobot {
 
     //Determine what auto to run
     switch(autoSelected){
+      case BottomBallAuto:
+        switch(auto_state){
+          case 0://Drive Forward
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.bottom_tarmac_to_ball*Constants.encoder_ratio){
+              xSpeed=Constants.auto_drive_speed;
+              intake_speed=Constants.auto_intake_speed;
+            }else{
+              xSpeed = 0;
+              starting_pos=dt.front_left.getSelectedSensorPosition();
+              auto_state++;
+            }
+            break;
+          case 1://Drive Back
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.bottom_ball_to_pivot*Constants.encoder_ratio){
+              xSpeed=-Constants.auto_drive_speed;
+              intake_speed=Constants.auto_intake_speed;
+            }else{
+              xSpeed = 0;
+              stop_time=timer.get();
+              auto_state++;
+            }
+            break;
+          case 2://Stop
+            if(timer.get()-stop_time<Constants.stop_dt_time){
+              xSpeed=0.5;
+            }else{
+              auto_state++;
+              xSpeed=0;
+              intake_speed=0;
+              navx.reset();//May not need this, requires some testing
+            }
+            break;
+          case 3://Turn
+            if(navx.getAngle()%360<=Constants.bottom_pivot_angle){
+              zRotation=Constants.auto_turn_speed;
+            }else{
+              zRotation=0;
+              auto_state++;
+              starting_pos=dt.front_left.getSelectedSensorPosition();
+            }
+            break;
+          case 4://Drive to wall
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.bottom_pivot_to_wall*Constants.encoder_ratio){
+              xSpeed=-Constants.auto_drive_speed;
+            }else{
+              xSpeed = 0;
+              stop_time=timer.get();
+              auto_state++;
+            }
+            break;
+          case 5://Stop
+            if(timer.get()-stop_time<Constants.stop_dt_time){
+              xSpeed=0.5;
+            }else{
+              auto_state++;
+              start_time=timer.get();
+              auto_start_time=timer.get();
+              xSpeed=0;
+            }
+            break;
+          case 6://Shoot
+            if(timer.get()-start_time<Constants.wall_shoot_time){
+              shooter_speed=Constants.wall_shooter_speed;
+              if(timer.get()-auto_start_time>Constants.conveyor_delay){
+                conveyor_speed=Constants.manual_conveyor_speed;
+                manual_conveyor=true;
+              }
+              if(!detected&&!prox_upper.get()){//Detects a ball as first ball
+                detected=true;
+              }else if(detected&&prox_upper.get()){//Not at proxy and has been detected, aka the first ball left
+                auto_start_time=timer.get();
+                detected=false;
+              }
+              manual_shooter=true;
+            }else{
+              auto_state++;
+              manual_shooter=false;
+              manual_conveyor=false;
+              conveyor_speed=0;
+              shooter_speed=0;
+            }
+            break;
+        }
       case BasicAuto:
           switch(auto_state){
-            case 0:
+            case 0://Drive forward
               if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.wall_to_ball*Constants.encoder_ratio){
                 xSpeed=Constants.auto_drive_speed;
                 intake_speed=Constants.auto_intake_speed;
               }else{
                 xSpeed = 0;
-                start_time=timer.get();
+                stop_time=timer.get();
                 auto_state++;
               }
               break;
-            case 1:
+            case 1://Stop driving
+              if(timer.get()-stop_time<Constants.stop_dt_time){
+                xSpeed=-0.5;
+              }else{
+                auto_state++;
+                start_time=timer.get();
+                xSpeed=0;
+              }
+              break;
+            case 2://Intake ball
               if(timer.get()-start_time<Constants.intake_ball_time){
                 intake_speed=Constants.auto_intake_speed;
               }else{
@@ -128,7 +232,7 @@ public class Robot extends TimedRobot {
                 auto_state++;
               }
               break;
-            case 2:
+            case 3://Drive back
               if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.ball_to_wall*Constants.encoder_ratio){
                 xSpeed = -Constants.auto_drive_speed;
               }else{
@@ -137,7 +241,7 @@ public class Robot extends TimedRobot {
                 auto_state++;
               }
               break;
-            case 3:
+            case 4://Shoot
               if(timer.get()-start_time<Constants.wall_shoot_time){
                 shooter_speed=Constants.wall_shooter_speed;
                 if(timer.get()-start_time>Constants.conveyor_delay){
@@ -158,7 +262,7 @@ public class Robot extends TimedRobot {
       case DriveAuto:
           switch(auto_state){
             case 0:
-              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<360*Constants.encoder_ratio){
+              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<120*Constants.encoder_ratio){
                 xSpeed=Constants.auto_drive_speed;
               }else{
                 auto_state++;
@@ -178,18 +282,42 @@ public class Robot extends TimedRobot {
           }
         break;
       case DefaultAuto://Start flush with wall and just shoot
-        if(timer.get()<Constants.wall_shoot_time){
-          shooter_speed=Constants.wall_shooter_speed;
-          manual_shooter=true;
-          if(timer.get()>Constants.conveyor_delay){
-            conveyor_speed=Constants.conveyor_shoot_speed;
-            manual_conveyor=true;
-          }
-        }else{
-          conveyor_speed=0;
-          manual_conveyor=false;
-          manual_shooter=false;
-        }
+          switch(auto_state){
+            case 0:
+              if(timer.get()<Constants.wall_shoot_time){
+                shooter_speed=Constants.wall_shooter_speed;
+                manual_shooter=true;
+                if(timer.get()>Constants.conveyor_delay){
+                  conveyor_speed=Constants.conveyor_shoot_speed;
+                  manual_conveyor=true;
+                }
+              }else{
+                conveyor_speed=0;
+                shooter_speed=0;
+                manual_conveyor=false;
+                manual_shooter=false;
+                auto_state++;
+              }
+              break;
+            case 1:
+              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.wall_to_ball*Constants.encoder_ratio){
+                xSpeed=Constants.auto_drive_speed;
+              }else{
+                xSpeed = 0;
+                starting_pos=dt.front_left.getSelectedSensorPosition();
+                stop_time=timer.get();
+                auto_state++;
+              }
+              break;
+            case 2:
+              if(timer.get()-stop_time<Constants.stop_dt_time){
+                xSpeed=-0.5;
+              }else{
+                auto_state++;
+                xSpeed=0;
+              }
+              break;
+            }
         break;
     }
 
@@ -202,6 +330,7 @@ public class Robot extends TimedRobot {
   public void teleopInit() {
     starting_pos=dt.front_left.getSelectedSensorPosition();
     start_time = 0;
+    stop_time=0;
     intake_speed=0;
     shooter_speed=0;
     conveyor_speed=0;
@@ -224,11 +353,12 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
     xSpeed = joystick_1.getRawAxis(1) * -1; // make forward stick positive
     zRotation = joystick_1.getRawAxis(2)*0.4; // WPI Drivetrain uses positive=> right
+
     //If ball detected make conveyor move to pull it
     if(prox_lower.get()){
       conveyor_speed=Constants.index_conveyor_speed;
       conveyor_index_time=timer.get();
-    }else if(!manual_conveyor&&timer.get()-conveyor_index_time>0.3){//If ball is not detected, so long as it is not under manual control conveyor will stop
+    }else if(!manual_conveyor&&timer.get()-conveyor_index_time>Constants.index_time){//If ball is not detected, so long as it is not under manual control conveyor will stop
       conveyor_speed=0;//Greater than 0.25 seconds since detecting a ball
     }
 
@@ -237,7 +367,7 @@ public class Robot extends TimedRobot {
       conveyor_speed=0;
     }
 
-    //Manually control shooter
+    /*//Manually control shooter
     if (joystick_0.getRawButton(Constants.manual_shoot_button)){
       shooter_speed=Constants.manual_shooter_speed;
       manual_shooter = true;
@@ -247,48 +377,61 @@ public class Robot extends TimedRobot {
     if (joystick_0.getRawButtonReleased(Constants.manual_shoot_button)){
       manual_shooter = false;
       shooter_speed=0;
-    }
+    }*/
 
-    if(joystick_1.getRawButtonPressed(Constants.manual_shoot_button)){
+    if(joystick_0.getRawButtonPressed(Constants.manual_shoot_button)){
       start_time=timer.get();
     }
 
     //Manually control shooter
-    if (joystick_1.getRawButton(Constants.manual_shoot_button)){
-      shooter_speed=Constants.manual_shooter_speed;
-      if(timer.get()-start_time>=1){
+    if (joystick_0.getRawButton(Constants.manual_shoot_button)){
+      shooter_speed=high_low;
+      if(timer.get()-start_time>=Constants.conveyor_delay){
         conveyor_speed=Constants.conveyor_shoot_speed;
         manual_conveyor=true;
       }else{
         conveyor_speed=0;
         manual_conveyor=false;
       }
-      /*if(!detected&&prox_upper.get()){
+      if(!detected&&!prox_upper.get()){//Detects a ball as first ball
         detected=true;
-      }else if(!prox_upper.get()&&detected){
+      }else if(detected&&prox_upper.get()){//Not at proxy and has been detected, aka the first ball left
         start_time=timer.get();
-      }*/
+        detected=false;
+      }
       manual_shooter = true;
     }
-
+    
     //Stop shooter when not manually controlled
-    if (joystick_1.getRawButtonReleased(Constants.manual_shoot_button)){
+    if (joystick_0.getRawButtonReleased(Constants.manual_shoot_button)){
       manual_shooter = false;
       manual_conveyor=false;
       shooter_speed=0;
       conveyor_speed=0;
       start_time=0;
       detected=false;
+      stop_time=0;
     }
 
-    if(joystick_1.getRawButtonPressed(Constants.servo_switch_button)){
+    if(joystick_1.getRawButtonPressed(Constants.intake_servo_button)){
       if(intake_servo.get()>0){
         intake_servo.set(0);
       }else{
         intake_servo.set(1);
       }
     }
-    
+
+    if(joystick_1.getRawButtonPressed(Constants.shooter_servo_button)){
+      if(shooter_servo_0.getPosition()>0){
+        shooter_servo_0.setSpeed(-1);
+        shooter_servo_1.setSpeed(-1);
+        high_low=Constants.manual_shooter_speed_high;
+      }else{
+        shooter_servo_0.setSpeed(1);
+        shooter_servo_1.setSpeed(1);
+        high_low=Constants.manual_shooter_speed_low;
+      }
+    }
     //Manually control intake
     if (joystick_0.getRawButton(Constants.manual_intake_button)){
       intake_speed=Constants.manual_intake_speed;
@@ -355,14 +498,23 @@ public class Robot extends TimedRobot {
 
     //Manually control climber
     if (joystick_0.getRawButton(Constants.manual_climber_button)){
-      left_climber_speed = Constants.manual_left_climber_speed_up;
-      right_climber_speed = Constants.manual_right_climber_speed_up;
+      if(left_can_climb){
+        left_climber_speed = Constants.manual_left_climber_speed_up;
+      }else{
+        left_climber_speed=0;
+      }
+      if(right_can_climb){
+        right_climber_speed = Constants.manual_right_climber_speed_up;
+      }else{
+        right_climber_speed=0;
+      }
       state=0;
     }
 
     //Stop climber when not manually controlled
     if (joystick_0.getRawButtonReleased(Constants.manual_climber_button)){
-      climber_speed=0;
+      left_climber_speed=0;
+      right_climber_speed=0;
       state=0;
     }
 
@@ -370,6 +522,8 @@ public class Robot extends TimedRobot {
     if (joystick_0.getRawButton(Constants.manual_rev_climber_button)){
       left_climber_speed = -Constants.manual_left_climber_speed_down;
       right_climber_speed= -Constants.manual_right_climber_speed_down;
+      left_can_climb=true;
+      right_can_climb=true;
       state=0;
     }
 
@@ -382,7 +536,11 @@ public class Robot extends TimedRobot {
 
     //Manually control left climber
     if (joystick_0.getRawButton(Constants.manual_left_climber_button)){
-      left_climber_speed = Constants.manual_left_climber_speed_up;
+      if(left_can_climb){
+        left_climber_speed = Constants.manual_left_climber_speed_up;
+      }else{
+        left_climber_speed=0;
+      }
       state=1;
     }
 
@@ -395,6 +553,7 @@ public class Robot extends TimedRobot {
     //Manually control left climber backwards
     if (joystick_0.getRawButton(Constants.manual_rev_left_climber_button)){
       left_climber_speed = -Constants.manual_left_climber_speed_down;
+      left_can_climb=true;
       state=1;
     }
 
@@ -406,7 +565,11 @@ public class Robot extends TimedRobot {
     
     //Manually control right climber
     if (joystick_0.getRawButton(Constants.manual_right_climber_button)){
-      right_climber_speed = Constants.manual_right_climber_speed_up;
+      if(right_can_climb){
+        right_climber_speed = Constants.manual_right_climber_speed_up;
+      }else{
+        right_climber_speed=0;
+      }
       state=2;
     }
 
@@ -419,6 +582,7 @@ public class Robot extends TimedRobot {
     //Manually control right climber backwards
     if (joystick_0.getRawButton(Constants.manual_rev_right_climber_button)){
       right_climber_speed = -Constants.manual_right_climber_speed_down;
+      right_can_climb=true;
       state=2;
     }
 
@@ -427,6 +591,15 @@ public class Robot extends TimedRobot {
       right_climber_speed=0;
       state=2;
     }
+
+    if(!hall_left.get()){//Switched so if it is true and "getting" then there is nothing there
+      left_can_climb=false;
+    }
+
+    if(!hall_right.get()){
+      right_can_climb=false;
+    }
+    
 
     //Executes all speeds
     dt.set_speeds(xSpeed, zRotation);
