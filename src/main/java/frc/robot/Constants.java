@@ -70,21 +70,35 @@ public class Constants{
 
     public static int intake_servo_button = 12;
     public static int shooter_servo_button = 10;
+
+    public static int space_shoot_button = 9;
     
     public static double encoder_ratio = 1375;//Number of raw values per inch
 
     //Auto Distances/Values
     public static double wall_to_ball = 160;//Distance from wall to ball in straight line
-   
+
+    public static double default_drive = 80;
     public static double bottom_tarmac_to_ball = 43;
     public static double bottom_ball_to_pivot = 75;
     public static double bottom_pivot_to_wall = 48;
     public static double bottom_pivot_angle = 65;
 
+    public static double top_tarmac_to_ball = 36;
+    public static double top_ball_to_wall = 110;
+    
+
     public static double wall_shoot_time = 4;
-    public static double conveyor_delay = 2;
+    public static double conveyor_delay = 1.5;
+    public static double conveyor_first_delay = 2.5;
     public static double intake_ball_time = 0.5;
     public static double ball_to_wall = 120;//Distance from ball to wall, higher because pushes against wall to become flush
-    public static double stop_dt_time = 0.30;
+    public static double stop_dt_time = 0.25;
     public static double index_time = 0.23;
+
+    public static double shooter_vel = 0;
+    public static double shooter_volt = -7.4;
+
+    public static double spacing = 6;
+    public static double spacing_speed = 0.3;
 }
