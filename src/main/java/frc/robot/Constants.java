@@ -54,8 +54,7 @@ public class Constants{
     //Buttons
     public static int manual_shoot_button = 1;
     
-    public static int manual_intake_button = 5;
-    public static int manual_intake_button_1 = 11;
+    public static int manual_intake_button = 11;
     public static int manual_rev_intake_button = 6;
 
     public static int manual_conveyor_button = 3;

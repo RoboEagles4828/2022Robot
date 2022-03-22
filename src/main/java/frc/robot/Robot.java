@@ -23,7 +23,6 @@ public class Robot extends TimedRobot {
   boolean manual_shooter = false;
   double shooter_speed = 0;
   boolean detected = false;
-  double high_low = Constants.manual_shooter_speed_high;
 
   Conveyor conveyor = new Conveyor();
   boolean manual_conveyor = false;
@@ -140,7 +139,7 @@ public class Robot extends TimedRobot {
               manual_conveyor=false;
               manual_shooter=false;
               starting_pos=dt.front_left.getSelectedSensorPosition();
-              auto_state=1;
+              auto_state++;
             }
             break;
           case 1://Drive to ball
@@ -151,7 +150,7 @@ public class Robot extends TimedRobot {
             }else{
               xSpeed = 0;
               stop_time=timer.get();
-              auto_state=2;
+              auto_state++;
             }
             break;
           case 2://Stop
@@ -159,7 +158,7 @@ public class Robot extends TimedRobot {
             if(timer.get()-stop_time<Constants.stop_dt_time){
               xSpeed=-0.5;
             }else{
-              auto_state=3;
+              auto_state++;
               xSpeed=0;
               starting_pos=dt.front_left.getSelectedSensorPosition();
               intake_speed=0;
@@ -170,7 +169,7 @@ public class Robot extends TimedRobot {
             if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Constants.top_ball_to_wall*Constants.encoder_ratio){
               xSpeed=-Constants.auto_drive_speed;
             }else{
-              auto_state=4;
+              auto_state++;
               stop_time=timer.get();
               xSpeed=0;
             }
@@ -180,7 +179,7 @@ public class Robot extends TimedRobot {
             if(timer.get()-stop_time<Constants.stop_dt_time){
               xSpeed=0.5;
             }else{
-              auto_state=5;
+              auto_state++;
               start_time=timer.get();
               xSpeed=0;
             }
@@ -453,6 +452,7 @@ public class Robot extends TimedRobot {
     xSpeed = joystick_1.getRawAxis(1) * -1; // make forward stick positive
     zRotation = joystick_1.getRawAxis(2)*0.55; // WPI Drivetrain uses positive=> right
 
+    //All automated functions run first
     //If ball detected make conveyor move to pull it
     if(prox_lower.get()){
       conveyor_speed=Constants.index_conveyor_speed;
@@ -470,28 +470,17 @@ public class Robot extends TimedRobot {
       xSpeed=Constants.spacing_speed;
     }
 
-    /*//Manually control shooter
-    if  (joystick_0.getRawButton(Constants.manual_shoot_button)){
-      shooter_speed=Constants.manual_shooter_speed;
-      manual_shooter = true;
-    }
 
-    //Stop shooter when not manually controlled
-    if (joystick_0.getRawButtonReleased(Constants.manual_shoot_button)){
-      manual_shooter = false;
-      shooter_speed=0;
-    }*/
-
+    //All shooter controls
     if(joystick_0.getRawButtonPressed(Constants.manual_shoot_button)){
       start_time=timer.get();
       starting_pos=dt.front_left.getSelectedSensorPosition();
       is_spacing=true;
     }
-
-    /*
+ 
     //Manually control shooter
     if (joystick_0.getRawButton(Constants.manual_shoot_button)){
-      shooter_speed=high_low;
+      shooter_speed=Constants.shooter_volt;
       if(first){
         if(timer.get()-start_time>=Constants.conveyor_first_delay){
           conveyor_speed=Constants.conveyor_shoot_speed;
@@ -517,38 +506,6 @@ public class Robot extends TimedRobot {
         first=false;
       }
       manual_shooter = true;
-    }*/
-
-    /*
-    if(joystick_0.getRawButton(Constants.manual_shoot_button)){
-      shooter_speed=high_low;
-        if(shooter.shooter.getActiveTrajectoryVelocity()>=Constants.shooter_vel){
-          conveyor_speed=Constants.conveyor_shoot_speed;
-          manual_conveyor=true;
-        }else{
-          conveyor_speed=0;
-          manual_conveyor=false;
-      }
-      manual_shooter = true;
-    }*/
-
-    if (joystick_0.getRawButton(Constants.manual_shoot_button)){
-      shooter_speed=Constants.shooter_volt;
-      if(timer.get()-start_time>=Constants.conveyor_first_delay){
-        conveyor_speed=Constants.conveyor_shoot_speed;
-        manual_conveyor=true;
-      }else{
-        conveyor_speed=0;
-        manual_conveyor=false;
-      }
-      if(!detected&&!prox_upper.get()){//Detects a ball as first ball
-        detected=true;
-      }else if(detected&&prox_upper.get()){//Not at proxy and has been detected, aka the first ball left
-        start_time=timer.get();
-        detected=false;
-        first=false;
-      }
-      manual_shooter = true;
     }
 
     //Stop shooter when not manually controlled
@@ -564,15 +521,8 @@ public class Robot extends TimedRobot {
       is_spacing=false;
     }
 
-    /*if(joystick_1.getRawButtonPressed(Constants.space_shoot_button)){
-      starting_pos=dt.front_left.getSelectedSensorPosition();
-      is_spacing=true;
-    }
 
-    if(joystick_1.getRawButtonReleased(Constants.space_shoot_button)){
-      is_spacing=false;
-    }*/
-
+    //All servo controls
     if(joystick_1.getRawButtonPressed(Constants.intake_servo_button)){
       if(intake_servo.get()>0){
         intake_servo.set(0);
@@ -585,39 +535,20 @@ public class Robot extends TimedRobot {
       if(shooter_servo_0.getPosition()>0){
         shooter_servo_0.setSpeed(-1);
         shooter_servo_1.setSpeed(-1);
-        high_low=Constants.manual_shooter_speed_high;
       }else{
         shooter_servo_0.setSpeed(1);
         shooter_servo_1.setSpeed(1);
-        high_low=Constants.manual_shooter_speed_low;
       }
     }
+
+
+    //Intake Controls
     //Manually control intake
-    if (joystick_0.getRawButton(Constants.manual_intake_button)){
-      intake_speed=Constants.manual_intake_speed;
-    }
-
-    //Stop intake when not manually controlled
-    if (joystick_0.getRawButtonReleased(Constants.manual_intake_button)){
-      intake_speed=0;
-    }
-
-    //Manually control intake
-    if (joystick_1.getRawButton(Constants.manual_intake_button_1)){
-      intake_speed=Constants.manual_intake_speed;
-    }
-
-    //Stop intake when not manually controlled
-    if (joystick_1.getRawButtonReleased(Constants.manual_intake_button_1)){
-      intake_speed=0;
-    }
-
-    //Manually control intake for other joystick
     if (joystick_1.getRawButton(Constants.manual_intake_button)){
       intake_speed=Constants.manual_intake_speed;
     }
 
-    //Stop intake when not manually controlled other joystick
+    //Stop intake when not manually controlled
     if (joystick_1.getRawButtonReleased(Constants.manual_intake_button)){
       intake_speed=0;
     }
@@ -632,6 +563,8 @@ public class Robot extends TimedRobot {
       intake_speed=0;
     }
 
+
+    //Conveyor Controls
     //Manually control conveyor
     if (joystick_0.getRawButton(Constants.manual_conveyor_button)){
       conveyor_speed = Constants.manual_conveyor_speed;
@@ -656,6 +589,8 @@ public class Robot extends TimedRobot {
       conveyor_speed=0;
     }
 
+
+    //Climber Controls
     //Manually control climber
     if (joystick_0.getRawButton(Constants.manual_climber_button)){
       if(left_can_climb){
@@ -751,7 +686,8 @@ public class Robot extends TimedRobot {
       right_climber_speed=0;
       state=2;
     }
-
+    
+    //Hall effects for climbers
     if(!hall_left.get()){//Switched so if it is true and "getting" then there is nothing there
       left_can_climb=false;
     }
@@ -763,7 +699,6 @@ public class Robot extends TimedRobot {
 
     //Executes all speeds
     dt.set_speeds(xSpeed, zRotation);
-    //shooter.set_speed(shooter_speed);
     shooter.shooter.setVoltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
