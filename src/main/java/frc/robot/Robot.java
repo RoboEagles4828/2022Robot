@@ -60,7 +60,9 @@ public class Robot extends TimedRobot {
   static final String WallToBallAuto = "WallToBallAuto";//Climbing area is "top" part
   static final String TarmacToBallAuto = "TarmacToBallAuto";
   static final String Shoot = "ShootAuto";
-  static final String TestAuto = "TestAuto";
+  static final String TurnRight = "TurnRight";
+  static final String TurnLeft = "TurnLeft";
+  static final String Triangle = "Triangle";
   SendableChooser<String> chooser = new SendableChooser<>();
   String autoSelected;
   Timer timer = new Timer();
@@ -82,7 +84,9 @@ public class Robot extends TimedRobot {
     chooser.addOption("TarmacToBallAuto", TarmacToBallAuto);
     chooser.addOption("Wall To Ball Auto", WallToBallAuto);
     chooser.addOption("Shoot Auto", Shoot);
-    chooser.addOption("Test Auto", TestAuto);
+    chooser.addOption("Turn Right", TurnRight);
+    chooser.addOption("Turn Left", TurnLeft);
+    chooser.addOption("Triangle", Triangle);
     SmartDashboard.putData("Auto Choices:", chooser);
     CameraServer.startAutomaticCapture();
     CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
@@ -124,23 +128,85 @@ public class Robot extends TimedRobot {
       conveyor_speed=0;
     }
 
+    System.out.println(xSpeed);
+    
     //Determine what auto to run
     switch(autoSelected){
-      case TestAuto:
+      case TurnRight:
+        if(navx.getAngle()%360<45-Distances.turning_error){
+          zRotation=Speeds.auto_turn_speed;
+        }else{
+          zRotation=0;
+        }
+        break;
+      case TurnLeft:
+        if(navx.getAngle()%360>-45+Distances.turning_error){
+          zRotation=-Speeds.auto_turn_speed;
+        }else{
+          zRotation=0;
+        }
+        break;
+      case Triangle:
         switch(auto_state){
           case 0:
-            if(navx.getAngle()%360<90){
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<96*Distances.encoder_ratio){
+              xSpeed=0.3;
+            }else{
+              xSpeed=0;
+              navx.reset();
+              auto_state++;
+            }
+            break;
+          case 1:
+            if(navx.getAngle()%360<90-Distances.turning_error){
               zRotation=Speeds.auto_turn_speed;
             }else{
               zRotation=0;
               auto_state++;
+              starting_pos=dt.front_left.getSelectedSensorPosition();
+            }
+            break;
+          case 2:
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<72*Distances.encoder_ratio){
+              xSpeed=0.3;
+            }else{
+              xSpeed=0;
+              auto_state++;
+              navx.reset();
+            }
+            break;
+          case 3:
+            if(navx.getAngle()%360<90-Distances.turning_error){
+              zRotation=Speeds.auto_turn_speed;
+            }else{
+              zRotation=0;
+              auto_state++;
+              navx.reset();
+              starting_pos=dt.front_left.getSelectedSensorPosition();
+            }
+            break;
+          case 4:
+            if(navx.getAngle()%360<60-Distances.turning_error){
+              zRotation=Speeds.auto_turn_speed;
+            }else{
+              zRotation=0;
+            }
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<120*Distances.encoder_ratio){
+              xSpeed=0.3;
+            }else{
+              xSpeed=0;
             }
             break;
         }
         break;
       case TarmacToBallAuto:
           switch(auto_state){
-            case 0://Shoot
+            case 0:
+              if(timer.get()>Times.intake_drop_time){
+                auto_state++;
+              }
+              break;
+            case 1:
               if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.tarmac_to_ball*Distances.encoder_ratio){
                 xSpeed=Speeds.auto_drive_speed;
                 intake_speed=Speeds.auto_intake_speed;
@@ -149,7 +215,7 @@ public class Robot extends TimedRobot {
                 starting_pos=dt.front_left.getSelectedSensorPosition();
               }
               break;
-            case 1://Drive back to shoot and start reving up shooter
+            case 2://Drive back to shoot and start reving up shooter
               if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.ball_to_wall*Distances.encoder_ratio){
                 xSpeed=-Speeds.auto_drive_speed;
                 shooter_speed=Speeds.wall_shooter_speed;
@@ -158,16 +224,17 @@ public class Robot extends TimedRobot {
                 stop_time=timer.get();
               }
               break;
-            case 2://Stop
+            case 3://Stop
               if(timer.get()-stop_time<Times.stop_dt_time){
                 xSpeed=0.5;
               }else{
                 xSpeed=0;
                 auto_state++;
+                intake_speed=0;
                 start_time=timer.get();
               }
               break;
-            case 3://Shoot
+            case 4://Shoot
               if(timer.get()-start_time<Times.wall_shoot_time){
                 shooter_speed=Speeds.wall_shooter_speed;
                   if(first){
@@ -195,6 +262,8 @@ public class Robot extends TimedRobot {
                 manual_conveyor=false;
                 detected=false;
                 first=true;
+                shooter_speed=0;
+                conveyor_speed=0;
                 auto_state++;
               }
               break;
@@ -463,7 +532,7 @@ public class Robot extends TimedRobot {
     }
 
     //Manually control shooter
-    if (joystick_0.getRawButton(Buttons.manual_shoot_button)){
+    if (joystick_0.getRawButton(Buttons.manual_shoot_button)){//Shoot charge up and back up
       shooter_speed=Speeds.shooter_volt;
       if(first){
         if(timer.get()-start_time>=Times.conveyor_first_delay){
@@ -491,6 +560,10 @@ public class Robot extends TimedRobot {
       }
       manual_shooter = true;
     }
+
+    /*if(joystick_0.getRawButton(Buttons.manual_shoot_button)){
+      shooter_speed=Speeds.manual_shooter_speed_high;
+    }*/
 
     //Stop shooter when not manually controlled
     if (joystick_0.getRawButtonReleased(Buttons.manual_shoot_button)){
