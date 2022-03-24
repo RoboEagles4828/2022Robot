@@ -53,22 +53,23 @@ public class Limelight {
         table.getEntry("ledMode").setNumber(state);
     }
 
-    public double getDistanceFromTarget(double goalHeight, double camHeight, double ty) {
+    public double getDistanceFromTarget(double goalHeight, double camHeight) {
         double distance = 0;
         if (!hasValidTarget()) {
             distance = -1;
         }
         else {
-            distance = (goalHeight - camHeight) / Math.tan(mountAngle + ty);
+            distance = (goalHeight - camHeight) / Math.tan((mountAngle + ty.getDouble(0)) * (Math.PI / 180));
         }
         return distance;
     }
 
     //-right +left
-    public double getAlignmentAdjustment(double headingErr) {
+    public double getAlignmentAdjustment() {
         double min = 0.05; //tune
         double adjustment = 0;
         double kP = 0.01; //tune
+        double headingErr = tx.getDouble(0);
         if (hasValidTarget()) {
             if (tx.getDouble(0) > 1) {
                 adjustment = kP * headingErr - min;
