@@ -3,7 +3,6 @@ package frc.robot;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.Joystick;
 
 public class Limelight {
 
@@ -54,23 +53,22 @@ public class Limelight {
         table.getEntry("ledMode").setNumber(state);
     }
 
-    public double getDistanceFromTarget(double goalHeight, double camHeight) {
+    public double getDistanceFromTarget(double goalHeight, double camHeight, double ty) {
         double distance = 0;
         if (!hasValidTarget()) {
             distance = -1;
         }
         else {
-            distance = (goalHeight - camHeight) / Math.tan(mountAngle + ty.getDouble(0));
+            distance = (goalHeight - camHeight) / Math.tan(mountAngle + ty);
         }
         return distance;
     }
 
     //-right +left
-    public double getAlignmentAdjustment() {
+    public double getAlignmentAdjustment(double headingErr) {
         double min = 0.05; //tune
         double adjustment = 0;
         double kP = 0.01; //tune
-        double headingErr = -tx.getDouble(0);
         if (hasValidTarget()) {
             if (tx.getDouble(0) > 1) {
                 adjustment = kP * headingErr - min;
