@@ -38,6 +38,13 @@ public class DriveTrain {
         dt.arcadeDrive(xSpeed, zRotation);
     }
 
+    public void set_speeds_voltage(double leftSpeed, double rightSpeed, double startingpos){
+        double leftV = feedforward.calculate(leftSpeed);
+        double rightV = feedforward.calculate(rightSpeed);
+        left.setVoltage(leftPIDController.calculate(front_left.getSelectedSensorPosition()-startingpos, leftSpeed) + leftV);
+        right.setVoltage(rightPIDController.calculate(front_right.getSelectedSensorPosition()-startingpos, rightSpeed) + rightV);
+    }
+
     public void stop(){
         dt.arcadeDrive(0, 0);
     }

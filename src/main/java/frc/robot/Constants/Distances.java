@@ -2,6 +2,7 @@ package frc.robot.Constants;
 
 public class Distances {
     public static double encoder_ratio = 1375;
+    
     public static double revs_count = 2048;
     public static double gear_ratio = 10.71;
     public static double wheel_size = 6;

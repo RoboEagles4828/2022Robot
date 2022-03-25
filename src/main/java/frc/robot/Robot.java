@@ -14,12 +14,14 @@ import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.math.controller.RamseteController;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryUtil;
-import edu.wpi.first.math.trajectory.TrajectoryUtil.*;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive.WheelSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants.*;
@@ -35,8 +37,9 @@ public class Robot extends TimedRobot {
   Trajectory trajectory = new Trajectory();
   TrajectoryConfig config = new TrajectoryConfig(Units.feetToMeters(Distances.max_vel), Units.feetToMeters(Distances.max_acc)).setKinematics(dt.kin);
 
-  RamseteController controller = new RamseteController();
-  
+  ChassisSpeeds auto_chassis_speeds = new ChassisSpeeds();
+  DifferentialDriveWheelSpeeds auto_speeds = new DifferentialDriveWheelSpeeds();
+  RamseteController controller = new RamseteController();  
 
   Shooter shooter = new Shooter();
   boolean manual_shooter = false;
@@ -217,17 +220,56 @@ public class Robot extends TimedRobot {
             break;
         }
         break;
+
       case ThreeBallAuto:
           switch(auto_state){
             case 0:
-              if (timer.get()>Times.intake_drop_time){
+              if(timer.get()<Times.wall_shoot_time){
+                shooter_speed=Speeds.wall_shooter_speed;
+                manual_shooter=true;
+                if(timer.get()>Times.conveyor_first_delay){
+                  conveyor_speed=Speeds.conveyor_shoot_speed;
+                  manual_conveyor=true;
+                }
+              }else{
+                conveyor_speed=0;
+                shooter_speed=0;
+                manual_conveyor=false;
+                manual_shooter=false;
                 auto_state++;
               }
               break;
             case 1:
-              
+              intake.set_speed(intake_speed);
+              goal = trajectory.sample(timer.get()-Times.wall_shoot_time);
+              auto_chassis_speeds = controller.calculate(pose, goal);
+              auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
+              if(timer.get()-Times.wall_shoot_time >= trajectory.getTotalTimeSeconds()){
+                dt.set_speeds_voltage(0.0, 0.0, starting_pos);
+                intake.set_speed(0);
+                auto_state++;
+              }
+              break;
+            case 2:
+              if(timer.get()-Times.wall_shoot_time-trajectory.getTotalTimeSeconds() < Times.wall_shoot_time){
+                  shooter_speed=Speeds.wall_shooter_speed;
+                  manual_shooter=true;
+                  if(timer.get()-Times.wall_shoot_time-trajectory.getTotalTimeSeconds()>Times.conveyor_first_delay){
+                    conveyor_speed=Speeds.conveyor_shoot_speed;
+                    manual_conveyor=true;
+                  }
+                }else{
+                  conveyor_speed=0;
+                  shooter_speed=0;
+                  manual_conveyor=false;
+                  manual_shooter=false;
+                  auto_state++;
+                }
+                break;
           }
-      case TarmacToBallAuto:
+          break;
+
+        case TarmacToBallAuto:
           switch(auto_state){
             case 0:
               if(timer.get()>Times.intake_drop_time){
@@ -494,7 +536,8 @@ public class Robot extends TimedRobot {
         break;
     }
 
-    dt.set_speeds(xSpeed, zRotation);
+    // dt.set_speeds(xSpeed, zRotation);
+    dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos);
     shooter.set_voltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
