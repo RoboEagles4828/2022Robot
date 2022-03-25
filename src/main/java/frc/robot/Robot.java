@@ -4,10 +4,21 @@
 
 package frc.robot;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.math.controller.RamseteController;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import edu.wpi.first.math.trajectory.TrajectoryUtil;
+import edu.wpi.first.math.trajectory.TrajectoryUtil.*;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -19,7 +30,14 @@ public class Robot extends TimedRobot {
   DriveTrain dt = new DriveTrain();
   double xSpeed = 0;
   double zRotation = 0;
+
+  Pose2d pose = new Pose2d();
+  Trajectory trajectory = new Trajectory();
+  TrajectoryConfig config = new TrajectoryConfig(Units.feetToMeters(Distances.max_vel), Units.feetToMeters(Distances.max_acc)).setKinematics(dt.kin);
+
+  RamseteController controller = new RamseteController();
   
+
   Shooter shooter = new Shooter();
   boolean manual_shooter = false;
   double shooter_speed = 0;
@@ -63,6 +81,7 @@ public class Robot extends TimedRobot {
   static final String TurnRight = "TurnRight";
   static final String TurnLeft = "TurnLeft";
   static final String Triangle = "Triangle";
+  static final String ThreeBallAuto = "ThreeBallAuto";
   SendableChooser<String> chooser = new SendableChooser<>();
   String autoSelected;
   Timer timer = new Timer();
@@ -87,11 +106,19 @@ public class Robot extends TimedRobot {
     chooser.addOption("Turn Right", TurnRight);
     chooser.addOption("Turn Left", TurnLeft);
     chooser.addOption("Triangle", Triangle);
+    chooser.addOption("Three Ball Auto", ThreeBallAuto);
     SmartDashboard.putData("Auto Choices:", chooser);
     CameraServer.startAutomaticCapture();
     CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature
     dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
+    File trajectoryFile = new File(Filesystem.getDeployDirectory().getName()+"paths/3ball.wpilib.json");
+    try{
+      trajectory = TrajectoryUtil.fromPathweaverJson(trajectoryFile.toPath());
+    }
+    catch (IOException ex){
+      System.out.println("unable to import trajectory");
+    }
     //navx.calibrate();
   }
 
@@ -111,10 +138,15 @@ public class Robot extends TimedRobot {
     zRotation=0;
     stop_time=0;
     navx.reset();
+
   }
 
   @Override
   public void autonomousPeriodic(){
+    pose = dt.odom.update(dt.getHeading(), dt.convertMeters(dt.front_left.getSelectedSensorPosition()-starting_pos), dt.convertMeters(dt.front_right.getSelectedSensorPosition()-starting_pos));
+    Trajectory.State goal = new Trajectory.State();
+
+
     //If ball detected make conveyor move to pull it
     if(prox_lower.get()){
       conveyor_speed=Speeds.index_conveyor_speed;
@@ -128,24 +160,10 @@ public class Robot extends TimedRobot {
       conveyor_speed=0;
     }
 
-    System.out.println(xSpeed);
-    
+    // System.out.println(xSpeed);
+    System.out.println(navx.getAngle());
     //Determine what auto to run
     switch(autoSelected){
-      case TurnRight:
-        if(navx.getAngle()%360<45-Distances.turning_error){
-          zRotation=Speeds.auto_turn_speed;
-        }else{
-          zRotation=0;
-        }
-        break;
-      case TurnLeft:
-        if(navx.getAngle()%360>-45+Distances.turning_error){
-          zRotation=-Speeds.auto_turn_speed;
-        }else{
-          zRotation=0;
-        }
-        break;
       case Triangle:
         switch(auto_state){
           case 0:
@@ -199,6 +217,16 @@ public class Robot extends TimedRobot {
             break;
         }
         break;
+      case ThreeBallAuto:
+          switch(auto_state){
+            case 0:
+              if (timer.get()>Times.intake_drop_time){
+                auto_state++;
+              }
+              break;
+            case 1:
+              
+          }
       case TarmacToBallAuto:
           switch(auto_state){
             case 0:

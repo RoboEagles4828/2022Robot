@@ -2,6 +2,21 @@ package frc.robot.Constants;
 
 public class Distances {
     public static double encoder_ratio = 1375;
+    public static double revs_count = 2048;
+    public static double gear_ratio = 10.71;
+    public static double wheel_size = 6;
+    public static double track_width = 28;
+
+    public static double kS = 0.268;
+    public static double kV = 1.89;
+    public static double kA = 0.243;
+
+    public static double kp = 9.95;
+    public static double ki = 0;
+    public static double kd = 0;
+
+    public static double max_vel = 7;
+    public static double max_acc = 5; //CHANGE THIS
     
     public static double wall_to_ball = 80;//Distance from wall to ball in straight line
 
