@@ -21,7 +21,6 @@ import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryUtil;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.*;
-import edu.wpi.first.wpilibj.drive.DifferentialDrive.WheelSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants.*;
@@ -85,6 +84,7 @@ public class Robot extends TimedRobot {
   static final String TurnLeft = "TurnLeft";
   static final String Triangle = "Triangle";
   static final String ThreeBallAuto = "ThreeBallAuto";
+  static final String TrajectoryAuto = "TrajectoryAuto";
   SendableChooser<String> chooser = new SendableChooser<>();
   String autoSelected;
   Timer timer = new Timer();
@@ -110,6 +110,7 @@ public class Robot extends TimedRobot {
     chooser.addOption("Turn Left", TurnLeft);
     chooser.addOption("Triangle", Triangle);
     chooser.addOption("Three Ball Auto", ThreeBallAuto);
+    chooser.addOption("Trajectory test", TrajectoryAuto);
     SmartDashboard.putData("Auto Choices:", chooser);
     CameraServer.startAutomaticCapture();
     CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
@@ -167,6 +168,17 @@ public class Robot extends TimedRobot {
     System.out.println(navx.getAngle());
     //Determine what auto to run
     switch(autoSelected){
+      case TrajectoryAuto:
+        intake.set_speed(intake_speed);
+        goal = trajectory.sample(timer.get());
+        auto_chassis_speeds = controller.calculate(pose, goal);
+        auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
+        if(timer.get() >= trajectory.getTotalTimeSeconds()){
+          dt.set_speeds_voltage(0.0, 0.0, starting_pos);
+          intake.set_speed(0);
+          auto_state++;
+        }
+        break;
       case Triangle:
         switch(auto_state){
           case 0:
@@ -830,6 +842,8 @@ public class Robot extends TimedRobot {
 
     //Executes all speeds
     dt.set_speeds(xSpeed, zRotation);
+    System.out.println(dt.getVel());
+
     shooter.shooter.setVoltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);

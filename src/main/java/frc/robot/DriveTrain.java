@@ -7,6 +7,7 @@ import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.math.util.Units;
@@ -80,6 +81,10 @@ public class DriveTrain {
         return rightPIDController;
     }
 
+    public double getVel(){
+        double mps = convertMeters(front_left.getSelectedSensorVelocity()) / 10.0;
+        return mps;
+    }
 
 
     // public DifferentialDriveWheelSpeeds getSpeeds(){
