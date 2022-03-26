@@ -29,6 +29,7 @@ public class DriveTrain {
         right = new MotorControllerGroup(front_right, back_right);
         dt = new DifferentialDrive(left, right);
         front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
+        front_right.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
 
         left.setInverted(false);
         right.setInverted(true);
@@ -43,6 +44,10 @@ public class DriveTrain {
         double rightV = feedforward.calculate(rightSpeed);
         left.setVoltage(leftPIDController.calculate(front_left.getSelectedSensorPosition()-startingpos, leftSpeed) + leftV);
         right.setVoltage(rightPIDController.calculate(front_right.getSelectedSensorPosition()-startingpos, rightSpeed) + rightV);
+        // front_left.feed();
+        // front_right.feed();
+        // back_left.feed();
+        // back_right.feed();
     }
 
     public void stop(){
@@ -66,6 +71,10 @@ public class DriveTrain {
         double wheelRotations = motorRotations / Distances.gear_ratio;
         double positionMeters = wheelRotations * (2 * Math.PI * Units.inchesToMeters(Distances.wheel_size));
         return positionMeters;
+    }
+
+    public double convertMeters2(double sensorCount){
+        return Units.inchesToMeters(sensorCount/Distances.encoder_ratio);
     }
 
     public SimpleMotorFeedforward getFeedforward(){

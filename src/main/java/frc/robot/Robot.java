@@ -6,6 +6,8 @@ package frc.robot;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.Path;
 
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.kauailabs.navx.frc.AHRS;
@@ -13,10 +15,10 @@ import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.math.controller.RamseteController;
 import edu.wpi.first.math.geometry.Pose2d;
+
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryUtil;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.*;
@@ -32,8 +34,9 @@ public class Robot extends TimedRobot {
   double zRotation = 0;
 
   Pose2d pose = new Pose2d();
-  Trajectory trajectory = new Trajectory();
-  TrajectoryConfig config = new TrajectoryConfig(Units.feetToMeters(Distances.max_vel), Units.feetToMeters(Distances.max_acc)).setKinematics(dt.kin);
+  Trajectory trajTest = new Trajectory();
+  Trajectory threeBall = new Trajectory();
+  // TrajectoryConfig config = new TrajectoryConfig(Units.feetToMeters(Distances.max_vel), Units.feetToMeters(Distances.max_acc)).setKinematics(dt.kin);
 
   ChassisSpeeds auto_chassis_speeds = new ChassisSpeeds();
   DifferentialDriveWheelSpeeds auto_speeds = new DifferentialDriveWheelSpeeds();
@@ -113,20 +116,13 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("Auto Choices:", chooser);
     //CameraServer.startAutomaticCapture();
     //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
-    //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature
-    dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
-    File trajectoryFile = new File(Filesystem.getDeployDirectory().getName()+"paths/3ball.wpilib.json");
-    try{
-      trajectory = TrajectoryUtil.fromPathweaverJson(trajectoryFile.toPath());
-    }
-    catch (IOException ex){
-      System.out.println("unable to import trajectory");
-    }
+    //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature    
     //navx.calibrate();
   }
 
   @Override
   public void autonomousInit(){
+    System.out.println(1.0/dt.convertMeters(1));
     autoSelected=chooser.getSelected();
     System.out.println("Auto selected: " + autoSelected);
     timer.reset();
@@ -142,6 +138,24 @@ public class Robot extends TimedRobot {
     stop_time=0;
     navx.reset();
 
+    //loading PathWeaver json files from deploy directory
+    Path ThreeBallPath = Filesystem.getDeployDirectory().toPath();
+    try {
+      ThreeBallPath = Filesystem.getDeployDirectory().toPath().resolve("paths/3ball.wpilib.json");
+      System.out.println("                              " + Filesystem.getDeployDirectory().getName());
+      threeBall = TrajectoryUtil.fromPathweaverJson(ThreeBallPath);
+    } catch (IOException ex) {
+      DriverStation.reportError("Unable to open trajectory: " + ThreeBallPath, ex.getStackTrace());
+    }
+
+    Path trajectoryPath = Filesystem.getDeployDirectory().toPath();
+    try {
+     trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve("paths/Unnamed.wpilib.json");
+     System.out.println("                              " + Filesystem.getDeployDirectory().getName());
+     trajTest = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
+  } catch (IOException ex) {
+      DriverStation.reportError("Unable to open trajectory: " + trajectoryPath, ex.getStackTrace());
+    }
   }
 
   @Override
@@ -164,19 +178,20 @@ public class Robot extends TimedRobot {
     }
 
     // System.out.println(xSpeed);
-    System.out.println(navx.getAngle());
+    // System.out.println(navx.getAngle());
     //Determine what auto to run
     switch(autoSelected){
       case TrajectoryAuto:
         switch(auto_state){
           case 0:
-          intake.set_speed(intake_speed);
-          goal = trajectory.sample(timer.get());
+          System.out.println("running auto");
+          intake_speed = Speeds.auto_intake_speed;
+          goal = trajTest.sample(timer.get());
           auto_chassis_speeds = controller.calculate(pose, goal);
           auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
-          if(timer.get() >= trajectory.getTotalTimeSeconds()){
-            dt.set_speeds_voltage(0.0, 0.0, starting_pos);
-            intake.set_speed(0);
+          if(timer.get() >= trajTest.getTotalTimeSeconds()){
+            auto_speeds = new DifferentialDriveWheelSpeeds(0, 0);
+            intake_speed = 0;
             auto_state++;
           }
           break;
@@ -248,41 +263,49 @@ public class Robot extends TimedRobot {
                 }
               }else{
                 conveyor_speed=0;
-                shooter_speed=0;
                 manual_conveyor=false;
-                manual_shooter=false;
                 auto_state++;
               }
               break;
             case 1:
-              intake.set_speed(intake_speed);
-              goal = trajectory.sample(timer.get()-Times.wall_shoot_time);
+              intake_speed = Speeds.auto_intake_speed;
+              goal = threeBall.sample(timer.get()-Times.wall_shoot_time);
+              System.out.println(timer.get()-Times.wall_shoot_time);
+              // System.out.println(Double.toString(pose.getX()) + ", " + pose.getY() + " - rotation " + pose.getRotation().getDegrees());
               auto_chassis_speeds = controller.calculate(pose, goal);
               auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
-              if(timer.get()-Times.wall_shoot_time >= trajectory.getTotalTimeSeconds()){
-                dt.set_speeds_voltage(0.0, 0.0, starting_pos);
-                intake.set_speed(0);
+              if(timer.get()-Times.wall_shoot_time >= threeBall.getTotalTimeSeconds()){
+                auto_speeds = new DifferentialDriveWheelSpeeds(0.0, 0.0);
+                intake_speed = 0;
                 auto_state++;
               }
               break;
             case 2:
-              if(timer.get()-Times.wall_shoot_time-trajectory.getTotalTimeSeconds() < Times.wall_shoot_time){
-                  shooter_speed=Speeds.wall_shooter_speed;
-                  manual_shooter=true;
-                  if(timer.get()-Times.wall_shoot_time-trajectory.getTotalTimeSeconds()>Times.conveyor_first_delay){
+              if(timer.get()-Times.wall_shoot_time-threeBall.getTotalTimeSeconds() < Times.wall_shoot_time){
+                if(first){
+                  conveyor_speed=Speeds.conveyor_shoot_speed;
+                  manual_conveyor=true;
+                }else{
+                  if(timer.get()-start_time>=Times.conveyor_delay){
                     conveyor_speed=Speeds.conveyor_shoot_speed;
                     manual_conveyor=true;
+                  }else{
+                    conveyor_speed=0;
+                    manual_conveyor=false;
                   }
-                }else{
-                  conveyor_speed=0;
-                  shooter_speed=0;
-                  manual_conveyor=false;
-                  manual_shooter=false;
-                  auto_state++;
                 }
+                if(!detected&&!prox_upper.get()){//Detects a ball as first ball
+                  detected=true;
+                }else if(detected&&prox_upper.get()){//Not at proxy and has been detected, aka the first ball left
+                  start_time=timer.get();
+                  detected=false;
+                  first=false;
+                }
+                manual_shooter = true;
                 break;
           }
-          break;
+        }
+        break;
 
         case TarmacToBallAuto:
           switch(auto_state){
@@ -553,10 +576,10 @@ public class Robot extends TimedRobot {
             }
         break;
     }
-    System.out.println("Vel 1: "+dt.getVel());
-    System.out.println("Vel 2: "+dt.getVel2());
-    System.out.println("Enc: "+dt.front_left.getSelectedSensorVelocity());
-    System.out.println("Acc: "+navx.getWorldLinearAccelX()+", "+navx.getWorldLinearAccelY()+", "+navx.getWorldLinearAccelZ());
+    // System.out.println("Vel 1: "+dt.getVel());
+    // System.out.println("Vel 2: "+dt.getVel2());
+    // System.out.println("Enc: "+dt.front_left.getSelectedSensorVelocity());
+    // System.out.println("Acc: "+navx.getWorldLinearAccelX()+", "+navx.getWorldLinearAccelY()+", "+navx.getWorldLinearAccelZ());
     //dt.set_speeds(xSpeed, zRotation);
     dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos);
     shooter.set_voltage(shooter_speed);

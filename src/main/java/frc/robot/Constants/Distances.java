@@ -5,8 +5,8 @@ public class Distances {
     
     public static double revs_count = 2048;
     public static double gear_ratio = 10.71;
-    public static double wheel_size = 6;
-    public static double track_width = 28;
+    public static double wheel_size = 3;
+    public static double track_width = 21.5;
 
     public static double kS = 0.268;
     public static double kV = 1.89;
