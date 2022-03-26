@@ -168,16 +168,20 @@ public class Robot extends TimedRobot {
     //Determine what auto to run
     switch(autoSelected){
       case TrajectoryAuto:
-        intake.set_speed(intake_speed);
-        goal = trajectory.sample(timer.get());
-        auto_chassis_speeds = controller.calculate(pose, goal);
-        auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
-        if(timer.get() >= trajectory.getTotalTimeSeconds()){
-          dt.set_speeds_voltage(0.0, 0.0, starting_pos);
-          intake.set_speed(0);
-          auto_state++;
+        switch(auto_state){
+          case 0:
+          intake.set_speed(intake_speed);
+          goal = trajectory.sample(timer.get());
+          auto_chassis_speeds = controller.calculate(pose, goal);
+          auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
+          if(timer.get() >= trajectory.getTotalTimeSeconds()){
+            dt.set_speeds_voltage(0.0, 0.0, starting_pos);
+            intake.set_speed(0);
+            auto_state++;
+          }
+          break;
         }
-        break;
+      break;
       case Triangle:
         switch(auto_state){
           case 0:
@@ -552,8 +556,9 @@ public class Robot extends TimedRobot {
     System.out.println("Vel 1: "+dt.getVel());
     System.out.println("Vel 2: "+dt.getVel2());
     System.out.println("Enc: "+dt.front_left.getSelectedSensorVelocity());
-     dt.set_speeds(xSpeed, zRotation);
-    //dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos);
+    System.out.println("Acc: "+navx.getWorldLinearAccelX()+", "+navx.getWorldLinearAccelY()+", "+navx.getWorldLinearAccelZ());
+    //dt.set_speeds(xSpeed, zRotation);
+    dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos);
     shooter.set_voltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
