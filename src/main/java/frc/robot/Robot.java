@@ -39,9 +39,11 @@ public class Robot extends TimedRobot {
   DifferentialDriveWheelSpeeds auto_speeds = new DifferentialDriveWheelSpeeds();
   RamseteController controller = new RamseteController();  
 
-  Shooter shooter = new Shooter();
+  Shooter shooter = new Shooter(Ports.shooter_port);
+  Shooter back_shooter = new Shooter(Ports.shooter_back_port);
   boolean manual_shooter = false;
   double shooter_speed = 0;
+  double back_shooter_speed = 0;
   boolean detected = false;
 
   Conveyor conveyor = new Conveyor();

@@ -12,8 +12,9 @@ public class Ports {
     public static int hall_right = 6;
 
     public static int shooter_port = 14;
+    public static int shooter_back_port = 15;
     
-    public static int conveyor_port = 15;
+    public static int conveyor_port = 7;
 
     public static int intake_port = 12;
 
