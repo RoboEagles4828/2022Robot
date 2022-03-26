@@ -26,6 +26,10 @@ public class DriveTrain {
         dt.arcadeDrive(xSpeed, zRotation);
     }
 
+    public void set_auto_speeds(double xSpeed, double zRotation){
+        dt.curvatureDrive(xSpeed, zRotation, false);
+    }
+
     public void stop(){
         dt.arcadeDrive(0, 0);
     }
