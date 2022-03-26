@@ -6,7 +6,6 @@ package frc.robot;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.kauailabs.navx.frc.AHRS;
@@ -112,8 +111,8 @@ public class Robot extends TimedRobot {
     chooser.addOption("Three Ball Auto", ThreeBallAuto);
     chooser.addOption("Trajectory test", TrajectoryAuto);
     SmartDashboard.putData("Auto Choices:", chooser);
-    CameraServer.startAutomaticCapture();
-    CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
+    //CameraServer.startAutomaticCapture();
+    //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature
     dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
     File trajectoryFile = new File(Filesystem.getDeployDirectory().getName()+"paths/3ball.wpilib.json");
@@ -474,9 +473,12 @@ public class Robot extends TimedRobot {
       case DriveAuto:
           switch(auto_state){
             case 0:
-              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.default_drive*Distances.encoder_ratio){
+              if(timer.get()<2){
                 xSpeed=Speeds.auto_drive_speed;
-              }else{
+              }
+              /*if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.default_drive*Distances.encoder_ratio){
+                xSpeed=Speeds.auto_drive_speed;
+              }*/else{
                 auto_state++;
                 stop_time=timer.get();
                 xSpeed=0;
@@ -547,9 +549,11 @@ public class Robot extends TimedRobot {
             }
         break;
     }
-
-    // dt.set_speeds(xSpeed, zRotation);
-    dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos);
+    System.out.println("Vel 1: "+dt.getVel());
+    System.out.println("Vel 2: "+dt.getVel2());
+    System.out.println("Enc: "+dt.front_left.getSelectedSensorVelocity());
+     dt.set_speeds(xSpeed, zRotation);
+    //dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos);
     shooter.set_voltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
@@ -842,7 +846,9 @@ public class Robot extends TimedRobot {
 
     //Executes all speeds
     dt.set_speeds(xSpeed, zRotation);
-    System.out.println(dt.getVel());
+    System.out.println("Vel 1: "+dt.getVel());
+    System.out.println("Vel 2: "+dt.getVel2());
+    System.out.println("Enc: "+dt.front_left.getSelectedSensorVelocity());
 
     shooter.shooter.setVoltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);
