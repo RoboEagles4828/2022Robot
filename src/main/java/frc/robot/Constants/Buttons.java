@@ -1,7 +1,7 @@
 package frc.robot.Constants;
 
 public class Buttons {
-    public static int manual_shoot_button = 0;
+    public static int manual_shoot_button = 1;
     
     public static int manual_intake_button = 11;
     public static int manual_rev_intake_button = 6;

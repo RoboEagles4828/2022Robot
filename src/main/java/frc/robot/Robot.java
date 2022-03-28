@@ -184,11 +184,12 @@ public class Robot extends TimedRobot {
       case TrajectoryAuto:
         switch(auto_state){
           case 0:
-          System.out.println("running auto");
           intake_speed = Speeds.auto_intake_speed;
           goal = trajTest.sample(timer.get());
           auto_chassis_speeds = controller.calculate(pose, goal);
           auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
+          System.out.println(timer.get());
+          System.out.println(auto_speeds);
           if(timer.get() >= trajTest.getTotalTimeSeconds()){
             auto_speeds = new DifferentialDriveWheelSpeeds(0, 0);
             intake_speed = 0;
