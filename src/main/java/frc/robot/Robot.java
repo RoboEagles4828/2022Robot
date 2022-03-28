@@ -4,10 +4,19 @@
 
 package frc.robot;
 
-import com.ctre.phoenix.motorcontrol.FeedbackDevice;
+import java.io.IOException;
+import java.nio.file.Path;
+
 import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.math.controller.RamseteController;
+import edu.wpi.first.math.geometry.Pose2d;
+
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
+import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrajectoryUtil;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -19,10 +28,21 @@ public class Robot extends TimedRobot {
   DriveTrain dt = new DriveTrain();
   double xSpeed = 0;
   double zRotation = 0;
-  
-  Shooter shooter = new Shooter();
+
+  Pose2d pose = new Pose2d();
+  Trajectory trajTest = new Trajectory();
+  Trajectory threeBall = new Trajectory();
+  // TrajectoryConfig config = new TrajectoryConfig(Units.feetToMeters(Distances.max_vel), Units.feetToMeters(Distances.max_acc)).setKinematics(dt.kin);
+
+  ChassisSpeeds auto_chassis_speeds = new ChassisSpeeds();
+  DifferentialDriveWheelSpeeds auto_speeds = new DifferentialDriveWheelSpeeds();
+  RamseteController controller = new RamseteController();  
+
+  Shooter shooter = new Shooter(Ports.shooter_port);
+  Shooter shooter_back = new Shooter(Ports.shooter_back_port);
   boolean manual_shooter = false;
   double shooter_speed = 0;
+  double shooter_back_speed = 0;
   boolean detected = false;
 
   Conveyor conveyor = new Conveyor();
@@ -53,18 +73,25 @@ public class Robot extends TimedRobot {
   boolean climber_mode = false;
 
   AHRS navx = new AHRS();
+  double starting_angle = 0;
 
   static final String DefaultAuto = "Default";
-  static final String BasicAuto = "DriveShoot";
   static final String DriveAuto = "Drive";
   static final String WallToBallAuto = "WallToBallAuto";//Climbing area is "top" part
   static final String TarmacToBallAuto = "TarmacToBallAuto";
   static final String Shoot = "ShootAuto";
-  static final String TestAuto = "TestAuto";
+  static final String TurnRight = "TurnRight";
+  static final String TurnLeft = "TurnLeft";
+  static final String Triangle = "Triangle";
+  static final String ThreeBall = "ThreeBall";
+  static final String ThreeBallAutoTraj = "ThreeBallAutoTraj";
+  static final String TrajectoryAuto = "TrajectoryAuto";
+  static final String ThreeBallInverted = "ThreeBallInverted";
   SendableChooser<String> chooser = new SendableChooser<>();
   String autoSelected;
   Timer timer = new Timer();
   double starting_pos = 0;
+  double start_right_pos = 0;
   int auto_state = 0;
   double auto_start_time = 0;//Only used for auto shooting
   double start_time = 0;//starting time for auto and recycled for auto shoot time
@@ -77,40 +104,70 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit(){
     chooser.setDefaultOption("Default Auto", DefaultAuto);
-    chooser.addOption("Basic Auto", BasicAuto);
     chooser.addOption("Drive Auto", DriveAuto);
     chooser.addOption("TarmacToBallAuto", TarmacToBallAuto);
     chooser.addOption("Wall To Ball Auto", WallToBallAuto);
     chooser.addOption("Shoot Auto", Shoot);
-    chooser.addOption("Test Auto", TestAuto);
+    chooser.addOption("Turn Right", TurnRight);
+    chooser.addOption("Turn Left", TurnLeft);
+    chooser.addOption("Triangle", Triangle);
+    chooser.addOption("Three Ball", ThreeBall);
+    chooser.addOption("Three Ball Inverted", ThreeBallInverted);
+    chooser.addOption("Three Ball Auto Traj", ThreeBallAutoTraj);
+    chooser.addOption("Trajectory test", TrajectoryAuto);
     SmartDashboard.putData("Auto Choices:", chooser);
-    CameraServer.startAutomaticCapture();
-    CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
-    //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature
-    dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
+    //CameraServer.startAutomaticCapture();
+    //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
+    //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature    
     //navx.calibrate();
   }
 
   @Override
   public void autonomousInit(){
+    //System.out.println(1.0/dt.convertMeters(1));
     autoSelected=chooser.getSelected();
     System.out.println("Auto selected: " + autoSelected);
     timer.reset();
     timer.start();
     starting_pos=dt.front_left.getSelectedSensorPosition();
+    start_right_pos=dt.front_right.getSelectedSensorPosition();
     intake_servo.set(1);
     auto_state=0;
     conveyor_speed=0;
     intake_speed=0;
     shooter_speed=0;
+    shooter_back_speed=0;
     xSpeed=0;
     zRotation=0;
     stop_time=0;
     navx.reset();
+    dt.navx.reset();
+    //loading PathWeaver json files from deploy directory
+    Path ThreeBallPath = Filesystem.getDeployDirectory().toPath();
+    try {
+      ThreeBallPath = Filesystem.getDeployDirectory().toPath().resolve("paths/3ball.wpilib.json");
+      System.out.println("                              " + Filesystem.getDeployDirectory().getName());
+      threeBall = TrajectoryUtil.fromPathweaverJson(ThreeBallPath);
+    } catch (IOException ex) {
+      DriverStation.reportError("Unable to open trajectory: " + ThreeBallPath, ex.getStackTrace());
+    }
+
+    Path trajectoryPath = Filesystem.getDeployDirectory().toPath();
+    try {
+     trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve("paths/Unnamed.wpilib.json");
+     System.out.println("                              " + Filesystem.getDeployDirectory().getName());
+     trajTest = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
+  } catch (IOException ex) {
+      DriverStation.reportError("Unable to open trajectory: " + trajectoryPath, ex.getStackTrace());
+    }
   }
 
   @Override
   public void autonomousPeriodic(){
+    pose = dt.odom.update(dt.getHeading(), dt.convertMeters(dt.front_left.getSelectedSensorPosition()-starting_pos), dt.convertMeters(dt.front_right.getSelectedSensorPosition()-starting_pos));
+    Trajectory.State goal = new Trajectory.State();
+
+
     //If ball detected make conveyor move to pull it
     if(prox_lower.get()){
       conveyor_speed=Speeds.index_conveyor_speed;
@@ -124,23 +181,148 @@ public class Robot extends TimedRobot {
       conveyor_speed=0;
     }
 
+    // System.out.println(xSpeed);
+    // System.out.println(navx.getAngle());
     //Determine what auto to run
     switch(autoSelected){
-      case TestAuto:
+      case TrajectoryAuto:
         switch(auto_state){
           case 0:
-            if(navx.getAngle()%360<90){
+          //intake_speed = Speeds.auto_intake_speed;
+          goal = trajTest.sample(timer.get());
+          auto_chassis_speeds = controller.calculate(pose, goal);
+          auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
+          System.out.println(auto_speeds);
+          // System.out.println(timer.get());
+          // System.out.println(auto_speeds);
+          if(timer.get() >= trajTest.getTotalTimeSeconds()){
+            auto_speeds = new DifferentialDriveWheelSpeeds(0, 0);
+            intake_speed = 0;
+            auto_state++;
+          }
+          break;
+        }
+      break;
+      case Triangle:
+        switch(auto_state){
+          case 0:
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<96*Distances.encoder_ratio){
+              xSpeed=0.3;
+            }else{
+              xSpeed=0;
+              navx.reset();
+              auto_state++;
+            }
+            break;
+          case 1:
+            if(navx.getAngle()%360<90-Distances.turning_error){
+              zRotation=Speeds.auto_turn_speed;
+              //xSpeed=0.3;//For Curvature
+            }else{
+              zRotation=0;
+              auto_state++;
+              starting_pos=dt.front_left.getSelectedSensorPosition();
+            }
+            break;
+          case 2:
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<72*Distances.encoder_ratio){
+              xSpeed=0.3;
+            }else{
+              xSpeed=0;
+              auto_state++;
+              navx.reset();
+            }
+            break;
+          case 3:
+            if(navx.getAngle()%360<90-Distances.turning_error){
               zRotation=Speeds.auto_turn_speed;
             }else{
               zRotation=0;
               auto_state++;
+              navx.reset();
+              starting_pos=dt.front_left.getSelectedSensorPosition();
+            }
+            break;
+          case 4:
+            if(navx.getAngle()%360<60-Distances.turning_error){
+              zRotation=Speeds.auto_turn_speed;
+            }else{
+              zRotation=0;
+            }
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<120*Distances.encoder_ratio){
+              xSpeed=0.3;
+            }else{
+              xSpeed=0;
             }
             break;
         }
         break;
+
+      case ThreeBallAutoTraj:
+        switch(auto_state){
+            case 0:
+              if(timer.get()<Times.wall_shoot_time){
+                shooter_speed=Speeds.shooter_volt;
+                shooter_back_speed=Speeds.shooter_back_volt;
+                manual_shooter=true;
+                if(timer.get()>Times.conveyor_first_delay){
+                  conveyor_speed=Speeds.conveyor_shoot_speed;
+                  manual_conveyor=true;
+                }
+              }else{
+                conveyor_speed=0;
+                manual_conveyor=false;
+                auto_state++;
+              }
+              break;
+            case 1:
+              intake_speed = Speeds.auto_intake_speed;
+              goal = threeBall.sample(timer.get()-Times.wall_shoot_time);
+              System.out.println(timer.get()-Times.wall_shoot_time);
+              // System.out.println(Double.toString(pose.getX()) + ", " + pose.getY() + " - rotation " + pose.getRotation().getDegrees());
+              auto_chassis_speeds = controller.calculate(pose, goal);
+              auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
+              if(timer.get()-Times.wall_shoot_time >= threeBall.getTotalTimeSeconds()){
+                auto_speeds = new DifferentialDriveWheelSpeeds(0.0, 0.0);
+                intake_speed = 0;
+                auto_state++;
+              }
+              break;
+            case 2:
+              if(timer.get()-Times.wall_shoot_time-threeBall.getTotalTimeSeconds() < Times.wall_shoot_time){
+                if(first){
+                  conveyor_speed=Speeds.conveyor_shoot_speed;
+                  manual_conveyor=true;
+                }else{
+                  if(timer.get()-start_time>=Times.conveyor_delay){
+                    conveyor_speed=Speeds.conveyor_shoot_speed;
+                    manual_conveyor=true;
+                  }else{
+                    conveyor_speed=0;
+                    manual_conveyor=false;
+                  }
+                }
+                if(!detected&&!prox_upper.get()){//Detects a ball as first ball
+                  detected=true;
+                }else if(detected&&prox_upper.get()){//Not at proxy and has been detected, aka the first ball left
+                  start_time=timer.get();
+                  detected=false;
+                  first=false;
+                }
+                manual_shooter = true;
+                break;
+          }
+        }
+        break;
+
       case TarmacToBallAuto:
-          switch(auto_state){
-            case 0://Shoot
+        switch(auto_state){
+            case 0:
+              if(timer.get()>Times.intake_drop_time){
+                auto_state++;
+              }
+              break;
+            case 1:
               if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.tarmac_to_ball*Distances.encoder_ratio){
                 xSpeed=Speeds.auto_drive_speed;
                 intake_speed=Speeds.auto_intake_speed;
@@ -149,27 +331,30 @@ public class Robot extends TimedRobot {
                 starting_pos=dt.front_left.getSelectedSensorPosition();
               }
               break;
-            case 1://Drive back to shoot and start reving up shooter
+            case 2://Drive back to shoot and start reving up shooter
               if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.ball_to_wall*Distances.encoder_ratio){
                 xSpeed=-Speeds.auto_drive_speed;
-                shooter_speed=Speeds.wall_shooter_speed;
+                shooter_speed=Speeds.shooter_volt;
+                shooter_back_speed=Speeds.shooter_back_volt;
               }else{
                 auto_state++;
                 stop_time=timer.get();
               }
               break;
-            case 2://Stop
+            case 3://Stop
               if(timer.get()-stop_time<Times.stop_dt_time){
                 xSpeed=0.5;
               }else{
                 xSpeed=0;
                 auto_state++;
+                intake_speed=0;
                 start_time=timer.get();
               }
               break;
-            case 3://Shoot
+            case 4://Shoot
               if(timer.get()-start_time<Times.wall_shoot_time){
-                shooter_speed=Speeds.wall_shooter_speed;
+                shooter_speed=Speeds.shooter_volt;
+                shooter_back_speed=Speeds.shooter_back_volt;
                   if(first){
                     conveyor_speed=Speeds.conveyor_shoot_speed;
                     manual_conveyor=true;
@@ -195,16 +380,20 @@ public class Robot extends TimedRobot {
                 manual_conveyor=false;
                 detected=false;
                 first=true;
+                shooter_speed=0;
+                shooter_back_speed=0;
+                conveyor_speed=0;
                 auto_state++;
               }
               break;
           }
           break;
       case WallToBallAuto:
-          switch(auto_state){
+        switch(auto_state){
             case 0:
               if(timer.get()<Times.wall_shoot_time){
-                shooter_speed=Speeds.wall_shooter_speed;
+                shooter_speed=Speeds.shooter_volt;
+                shooter_back_speed=Speeds.shooter_back_volt;
                 manual_shooter=true;
                 if(timer.get()>Times.conveyor_first_delay){
                   conveyor_speed=Speeds.conveyor_shoot_speed;
@@ -213,6 +402,7 @@ public class Robot extends TimedRobot {
               }else{
                 conveyor_speed=0;
                 shooter_speed=0;
+                shooter_back_speed=0;
                 manual_conveyor=false;
                 manual_shooter=false;
                 auto_state++;
@@ -247,7 +437,8 @@ public class Robot extends TimedRobot {
               break;
             case 4:
               if(timer.get()-start_time<Times.wall_shoot_time){
-                shooter_speed=Speeds.wall_shooter_speed;
+                shooter_speed=Speeds.shooter_volt;
+                shooter_back_speed=Speeds.shooter_back_volt;
                 manual_shooter=true;
                 if(timer.get()-start_time>Times.conveyor_first_delay){
                   conveyor_speed=Speeds.conveyor_shoot_speed;
@@ -256,6 +447,7 @@ public class Robot extends TimedRobot {
               }else{
                 conveyor_speed=0;
                 shooter_speed=0;
+                shooter_back_speed=0;
                 manual_conveyor=false;
                 manual_shooter=false;
                 auto_state++;
@@ -263,66 +455,176 @@ public class Robot extends TimedRobot {
               break;
           }
         break;
-      case BasicAuto:
-          switch(auto_state){
-            case 0://Drive forward
-              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.wall_to_ball*Distances.encoder_ratio){
-                xSpeed=Speeds.auto_drive_speed;
-                intake_speed=Speeds.auto_intake_speed;
-              }else{
-                xSpeed = 0;
-                stop_time=timer.get();
-                auto_state++;
+      case ThreeBall:
+        switch(auto_state){
+          case 0://Shoot
+            if(timer.get()<Times.wall_shoot_time-1){
+              shooter_speed=Speeds.shooter_volt;
+              shooter_back_speed=Speeds.shooter_back_volt;
+              manual_shooter=true;
+              xSpeed=0;
+              if(timer.get()>Times.conveyor_first_delay){
+                conveyor_speed=Speeds.conveyor_shoot_speed;
+                manual_conveyor=true;
               }
-              break;
-            case 1://Stop driving
-              if(timer.get()-stop_time<Times.stop_dt_time){
-                xSpeed=-0.5;
-              }else{
-                auto_state++;
-                start_time=timer.get();
-                xSpeed=0;
-              }
-              break;
-            case 2://Intake ball
-              if(timer.get()-start_time<Times.intake_ball_time){
-                intake_speed=Speeds.auto_intake_speed;
-              }else{
-                intake_speed=0;
-                starting_pos=dt.front_left.getSelectedSensorPosition();
-                auto_state++;
-              }
-              break;
-            case 3://Drive back
-              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.ball_to_wall*Distances.encoder_ratio){
-                xSpeed = -Speeds.auto_drive_speed;
-              }else{
-                xSpeed=0;
-                start_time=timer.get();
-                auto_state++;
-              }
-              break;
-            case 4://Shoot
-              if(timer.get()-start_time<Times.wall_shoot_time){
-                shooter_speed=Speeds.wall_shooter_speed;
-                if(timer.get()-start_time>Times.conveyor_delay){
-                  conveyor_speed=Speeds.manual_conveyor_speed;
+            }else{
+              conveyor_speed=0;
+              shooter_speed=0;
+              shooter_back_speed=0;
+              manual_conveyor=false;
+              manual_shooter=false;
+              auto_state++;
+            }
+            break;
+          case 1://Drive Back
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.wall_to_ball*Distances.encoder_ratio){
+              xSpeed=Speeds.auto_drive_speed;
+              intake_speed=Speeds.auto_intake_speed;
+            }else{
+              stop_time=timer.get();
+              auto_state++;
+            }
+            break;
+          case 2://Stop
+            if(timer.get()-stop_time<Times.stop_dt_time){
+              xSpeed=-0.5;
+            }else{
+              navx.reset();
+              xSpeed=0;
+              auto_state++;
+            }
+            break;
+          case 3://turn to face next ball
+            if(navx.getAngle()%360<Distances.ball_to_ball_angle-Distances.turning_error){
+              zRotation=Speeds.auto_turn_speed;
+            }else{
+              auto_state++;
+              zRotation=0;
+              starting_pos=dt.front_left.getSelectedSensorPosition();
+            }
+            break;
+          case 4://Drive to next ball
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.bot_ball_to_ball*Distances.encoder_ratio){
+              xSpeed=Speeds.auto_drive_speed;
+            }else{
+              auto_state++;
+              stop_time=timer.get();
+            }
+            break;
+          case 5://Stop
+            if(timer.get()-stop_time<Times.stop_dt_time){
+              xSpeed=-0.5;
+            }else{
+              xSpeed=0;
+              navx.reset();
+              auto_state++;
+            }
+            break;
+          case 6://Turn to face goal
+            if(navx.getAngle()%360>-Distances.ball_to_goal_angle+Distances.turning_error){
+              zRotation=-Speeds.auto_turn_speed;
+            }else{
+              zRotation=0;
+              intake_speed=0;
+              auto_state++;
+              starting_pos=dt.front_left.getSelectedSensorPosition();
+            }
+            break;
+          case 7://Drive to Goal
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.sec_ball_to_goal*Distances.encoder_ratio){
+              xSpeed=-Speeds.auto_drive_speed;
+              shooter_speed=Speeds.shooter_volt;
+              shooter_back_speed=Speeds.shooter_back_volt;
+            }else{
+              stop_time=timer.get();
+              auto_state++;
+            }
+            break;
+          case 8://Stop
+            if(timer.get()-stop_time<Times.stop_dt_time){
+              xSpeed=0.5;
+            }else{
+              xSpeed=0;
+              auto_state++;
+              start_time=timer.get();
+            }
+            break;
+          case 9://Shoot
+            if(timer.get()-start_time<Times.wall_shoot_time){
+              shooter_speed=Speeds.shooter_volt;
+              shooter_back_speed=Speeds.shooter_back_volt;
+                if(first){
+                  conveyor_speed=Speeds.conveyor_shoot_speed;
                   manual_conveyor=true;
+                }else{
+                  if(timer.get()-start_time>=Times.conveyor_delay){
+                    conveyor_speed=Speeds.conveyor_shoot_speed;
+                    manual_conveyor=true;
+                  }else{
+                    conveyor_speed=0;
+                    manual_conveyor=false;
+                  }
                 }
-                manual_shooter=true;
-              }else{
-                auto_state++;
-                manual_shooter=false;
-                manual_conveyor=false;
-                conveyor_speed=0;
-                shooter_speed=0;
+                if(!detected&&!prox_upper.get()){//Detects a ball as first ball
+                  detected=true;
+                }else if(detected&&prox_upper.get()){//Not at proxy and has been detected, aka the first ball left
+                  start_time=timer.get();
+                  detected=false;
+                  first=false;
+                }
+                manual_shooter = true;
+            }else{
+              manual_shooter=false;
+              manual_conveyor=false;
+              detected=false;
+              first=true;
+              shooter_speed=0;
+              shooter_back_speed=0;
+              conveyor_speed=0;
+              auto_state++;
+            }
+            break;
+        }
+        break;
+      case ThreeBallInverted:
+        switch(auto_state){
+          case 0://Shoot
+            if(timer.get()<Times.wall_shoot_time-1){
+              shooter_speed=Speeds.shooter_volt;
+              shooter_back_speed=Speeds.shooter_back_volt;
+              manual_shooter=true;
+              xSpeed=0;
+              if(timer.get()>Times.conveyor_first_delay){
+                conveyor_speed=Speeds.conveyor_shoot_speed;
+                manual_conveyor=true;
               }
-              break;
-          }
+            }else{
+              conveyor_speed=0;
+              shooter_speed=0;
+              shooter_back_speed=0;
+              manual_conveyor=false;
+              manual_shooter=false;
+              auto_state++;
+            }
+            break;
+          case 1://Drive Back
+            if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.wall_to_ball*Distances.encoder_ratio){
+              xSpeed=Speeds.auto_drive_speed;
+              intake_speed=Speeds.auto_intake_speed;
+            }else{
+              stop_time=timer.get();
+              auto_state++;
+            }
+            break;
+
+        }
         break;
       case DriveAuto:
-          switch(auto_state){
+        switch(auto_state){
             case 0:
+              /*if(timer.get()<2){
+                xSpeed=Speeds.auto_drive_speed;
+              }*/
               if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.default_drive*Distances.encoder_ratio){
                 xSpeed=Speeds.auto_drive_speed;
               }else{
@@ -333,7 +635,7 @@ public class Robot extends TimedRobot {
               break;
             case 1:
               if(timer.get()-stop_time<Times.stop_dt_time){
-                xSpeed=-0.5;
+                xSpeed=-Speeds.auto_drive_speed;
               }else{
                 auto_state++;
               }
@@ -344,7 +646,8 @@ public class Robot extends TimedRobot {
         break;
       case Shoot:
         if(timer.get()<Times.wall_shoot_time){
-          shooter_speed=Speeds.wall_shooter_speed;
+          shooter_speed=Speeds.shooter_volt;
+          shooter_back_speed=Speeds.shooter_back_volt;
           manual_shooter=true;
           if(timer.get()>Times.conveyor_first_delay){
             conveyor_speed=Speeds.conveyor_shoot_speed;
@@ -353,15 +656,17 @@ public class Robot extends TimedRobot {
         }else{
           conveyor_speed=0;
           shooter_speed=0;
+          shooter_back_speed=0;
           manual_conveyor=false;
           manual_shooter=false;
         }
         break;
       case DefaultAuto://Start flush with wall and just shoot
-          switch(auto_state){
+        switch(auto_state){
             case 0:
               if(timer.get()<Times.wall_shoot_time){
-                shooter_speed=Speeds.wall_shooter_speed;
+                shooter_speed=Speeds.shooter_volt;
+                shooter_back_speed=Speeds.shooter_back_volt;
                 manual_shooter=true;
                 if(timer.get()>Times.conveyor_first_delay){
                   conveyor_speed=Speeds.conveyor_shoot_speed;
@@ -370,6 +675,7 @@ public class Robot extends TimedRobot {
               }else{
                 conveyor_speed=0;
                 shooter_speed=0;
+                shooter_back_speed=0;
                 manual_conveyor=false;
                 manual_shooter=false;
                 auto_state++;
@@ -397,8 +703,11 @@ public class Robot extends TimedRobot {
         break;
     }
 
-    dt.set_speeds(xSpeed, zRotation);
+    dt.set_speeds(xSpeed, zRotation);//Arcade drive
+    //dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos, start_right_pos);
+    //dt.set_auto_speeds(xSpeed, zRotation);//Curvature drive
     shooter.set_voltage(shooter_speed);
+    shooter_back.set_voltage(shooter_back_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
   }
@@ -408,6 +717,7 @@ public class Robot extends TimedRobot {
     stop_time=0;
     intake_speed=0;
     shooter_speed=0;
+    shooter_back_speed=0;
     conveyor_speed=0;
     timer.reset();
     timer.start();
@@ -428,7 +738,8 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     xSpeed = joystick_1.getRawAxis(1) * -1; // make forward stick positive
-    zRotation = joystick_1.getRawAxis(2)*0.55; // WPI Drivetrain uses positive=> right
+    zRotation = joystick_1.getRawAxis(2)*0.55; // WPI Drivetrain uses positive=> right Arcade Drive
+    //zRotation = joystick_1.getRawAxis(2);//Curvature Drive
 
     if(joystick_0.getThrottle()>0.5){
       climber_mode=true;
@@ -450,9 +761,9 @@ public class Robot extends TimedRobot {
       conveyor_speed=0;
     }
 
-    if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.encoder_ratio*Distances.spacing&&is_spacing){
+    /*if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.encoder_ratio*Distances.spacing&&is_spacing){
       xSpeed=Speeds.spacing_speed;
-    }
+    }*/
 
 
     //All shooter controls
@@ -463,7 +774,7 @@ public class Robot extends TimedRobot {
     }
 
     //Manually control shooter
-    if (joystick_0.getRawButton(Buttons.manual_shoot_button)){
+    /*if (joystick_0.getRawButton(Buttons.manual_shoot_button)){//Shoot charge up and back up
       shooter_speed=Speeds.shooter_volt;
       if(first){
         if(timer.get()-start_time>=Times.conveyor_first_delay){
@@ -490,13 +801,43 @@ public class Robot extends TimedRobot {
         first=false;
       }
       manual_shooter = true;
+    }*/
+
+    if(joystick_0.getRawButton(Buttons.manual_shoot_button)){
+      shooter_speed=Speeds.shooter_volt;
+      manual_shooter=true;
+    }
+    /*shooter.shooter.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
+    System.out.println("Mag: "+shooter.shooter.getSelectedSensorVelocity());
+    shooter.shooter.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder);
+    System.out.println("Quad: "+shooter.shooter.getSelectedSensorVelocity());
+    shooter.shooter.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
+    System.out.println("Int: "+shooter.shooter.getSelectedSensorVelocity());*/  
+
+    if(joystick_1.getRawButton(Buttons.manual_shoot_button)){
+      shooter_back_speed=Speeds.shooter_back_volt;
+      manual_shooter=true;
     }
 
-    //Stop shooter when not manually controlled
     if (joystick_0.getRawButtonReleased(Buttons.manual_shoot_button)){
       manual_shooter = false;
       manual_conveyor=false;
       shooter_speed=0;
+      conveyor_speed=0;
+      start_time=0;
+      detected=false;
+      stop_time=0;
+      first=true;
+      is_spacing=false;
+    }
+
+
+
+    //Stop shooter when not manually controlled
+    if (joystick_1.getRawButtonReleased(Buttons.manual_shoot_button)){
+      manual_shooter = false;
+      manual_conveyor=false;
+      shooter_back_speed=0;
       conveyor_speed=0;
       start_time=0;
       detected=false;
@@ -686,9 +1027,13 @@ public class Robot extends TimedRobot {
 
     //Executes all speeds
     dt.set_speeds(xSpeed, zRotation);
-    shooter.shooter.setVoltage(shooter_speed);
+    //dt.set_auto_speeds(xSpeed, zRotation);//Curvature
+    shooter.set_voltage(shooter_speed);
+    shooter_back.set_voltage(shooter_back_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
+    System.out.println("Shooter:" +shooter.get_velocity());
+    System.out.println("Back: "+shooter_back.get_velocity());
 
     if(state==0){
       climber.set_speeds(left_climber_speed, right_climber_speed);
