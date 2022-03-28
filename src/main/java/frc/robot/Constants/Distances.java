@@ -1,7 +1,7 @@
 package frc.robot.Constants;
 
 public class Distances {
-    public static double encoder_ratio = 1375;
+    public static double encoder_ratio = 1375;//1163 calculated
     
     public static double wall_to_ball = 72;//Distance from wall to ball in straight line
 

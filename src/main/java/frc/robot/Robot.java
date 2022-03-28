@@ -20,9 +20,11 @@ public class Robot extends TimedRobot {
   double xSpeed = 0;
   double zRotation = 0;
   
-  Shooter shooter = new Shooter();
+  Shooter shooter = new Shooter(Ports.shooter_port);
+  Shooter shooter_back = new Shooter(Ports.shooter_back_port);
   boolean manual_shooter = false;
   double shooter_speed = 0;
+  double shooter_back_speed = 0;
   boolean detected = false;
 
   Conveyor conveyor = new Conveyor();
@@ -694,20 +696,39 @@ public class Robot extends TimedRobot {
 
     if(joystick_0.getRawButton(Buttons.manual_shoot_button)){
       shooter_speed=Speeds.shooter_volt;
+      manual_shooter=true;
     }
-    shooter.shooter.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
+    /*shooter.shooter.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
     System.out.println("Mag: "+shooter.shooter.getSelectedSensorVelocity());
     shooter.shooter.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder);
     System.out.println("Quad: "+shooter.shooter.getSelectedSensorVelocity());
     shooter.shooter.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
-    System.out.println("Int: "+shooter.shooter.getSelectedSensorVelocity());
+    System.out.println("Int: "+shooter.shooter.getSelectedSensorVelocity());*/  
 
+    if(joystick_1.getRawButton(Buttons.manual_shoot_button)){
+      shooter_back_speed=Speeds.shooter_back_volt;
+      manual_shooter=true;
+    }
 
-    //Stop shooter when not manually controlled
     if (joystick_0.getRawButtonReleased(Buttons.manual_shoot_button)){
       manual_shooter = false;
       manual_conveyor=false;
       shooter_speed=0;
+      conveyor_speed=0;
+      start_time=0;
+      detected=false;
+      stop_time=0;
+      first=true;
+      is_spacing=false;
+    }
+
+
+
+    //Stop shooter when not manually controlled
+    if (joystick_1.getRawButtonReleased(Buttons.manual_shoot_button)){
+      manual_shooter = false;
+      manual_conveyor=false;
+      shooter_back_speed=0;
       conveyor_speed=0;
       start_time=0;
       detected=false;
@@ -898,9 +919,12 @@ public class Robot extends TimedRobot {
     //Executes all speeds
     dt.set_speeds(xSpeed, zRotation);
     //dt.set_auto_speeds(xSpeed, zRotation);//Curvature
-    shooter.shooter.setVoltage(shooter_speed);
+    shooter.set_voltage(shooter_speed);
+    shooter_back.set_voltage(shooter_back_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
+    System.out.println("Shooter: "+shooter.shooter.getMotorOutputVoltage());
+    System.out.println("Back: "+shooter_back.shooter.getMotorOutputVoltage());
 
     if(state==0){
       climber.set_speeds(left_climber_speed, right_climber_speed);

@@ -1,9 +1,10 @@
 package frc.robot.Constants;
 
 public class Speeds {
-    public static double manual_shooter_speed_high = 0.65;///When manually controlled 0.69 for high, xx for low
+    public static double manual_shooter_speed_high = 0.40;///When manually controlled 0.69 for high, xx for low
     public static double manual_shooter_speed_low = 0.40;//Low shooter speed, not tested
     public static double wall_shooter_speed = -7.4;//Flush against wall shooting
+    public static double manual_shooter_back_speed = 1.0;
     
 
     public static double index_conveyor_speed = 0.5;
@@ -24,7 +25,8 @@ public class Speeds {
     public static double auto_field_shoot_speed = 1.0;
     public static double auto_turn_speed = 0.3;
 
-    public static double shooter_volt = -7.4;
+    public static double shooter_volt = -4.6;//-7.4
+    public static double shooter_back_volt = -11.45;//Ratio is 5:12 for front:back for little back spin
 
     public static double spacing_speed = 0.3;
 }
