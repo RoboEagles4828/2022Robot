@@ -45,12 +45,12 @@ public class DriveTrain {
     public DifferentialDriveWheelSpeeds set_speeds_voltage(double leftSpeed, double rightSpeed, double leftStart, double rightStart){
         double leftV = feedforward.calculate(leftSpeed);
         double rightV = feedforward.calculate(rightSpeed);
-        leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-leftStart, leftSpeed)+ leftV;
-        rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-rightStart, rightSpeed)+ rightV;
+        //leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-leftStart, leftSpeed)+ leftV;
+        //rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-rightStart, rightSpeed)+ rightV;
         System.out.println("setvoltage function - left velocity: " + leftV + ", right velocity: " + rightV);
 
-        left.setVoltage(leftV);
-        right.setVoltage(rightV);
+        //left.setVoltage(leftV);
+        //right.setVoltage(rightV);
         return new DifferentialDriveWheelSpeeds(leftV, rightV);
         // front_left.feed();
         // front_right.feed();
