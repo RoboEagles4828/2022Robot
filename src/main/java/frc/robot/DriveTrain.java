@@ -64,7 +64,7 @@ public class DriveTrain {
 
     //KINEMATICS begin here
     
-    private AHRS navx = new AHRS();
+    public AHRS navx = new AHRS();
     public DifferentialDriveKinematics kin = new DifferentialDriveKinematics(Units.inchesToMeters(Distances.track_width));
     public DifferentialDriveOdometry odom = new DifferentialDriveOdometry(getHeading());
     private SimpleMotorFeedforward feedforward = new SimpleMotorFeedforward(Distances.kS, Distances.kV, Distances.kA);
@@ -72,6 +72,7 @@ public class DriveTrain {
     private PIDController rightPIDController = new PIDController(Distances.kp, Distances.ki, Distances.kd);
 
     public Rotation2d getHeading(){
+        System.out.println(navx.getAngle());
         return Rotation2d.fromDegrees(navx.getAngle());
     }
     public double convertMeters(double sensorCounts){

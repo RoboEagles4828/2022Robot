@@ -73,6 +73,7 @@ public class Robot extends TimedRobot {
   boolean climber_mode = false;
 
   AHRS navx = new AHRS();
+  double starting_angle = 0;
 
   static final String DefaultAuto = "Default";
   static final String BasicAuto = "DriveShoot";
@@ -139,7 +140,7 @@ public class Robot extends TimedRobot {
     zRotation=0;
     stop_time=0;
     navx.reset();
-
+    dt.navx.reset();
     //loading PathWeaver json files from deploy directory
     Path ThreeBallPath = Filesystem.getDeployDirectory().toPath();
     try {
@@ -708,8 +709,8 @@ public class Robot extends TimedRobot {
         break;
     }
 
-    // dt.set_speeds(xSpeed, zRotation);//Arcade drive
-    dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos, start_right_pos);
+    dt.set_speeds(xSpeed, zRotation);//Arcade drive
+    //dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos, start_right_pos);
     //dt.set_auto_speeds(xSpeed, zRotation);//Curvature drive
     shooter.set_voltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);
