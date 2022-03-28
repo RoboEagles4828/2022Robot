@@ -11,7 +11,7 @@ public class Ports {
     public static int hall_left = 7;
     public static int hall_right = 6;
 
-    public static int shooter_port = 14;
+    public static int shooter_port = 11;
     
     public static int conveyor_port = 15;
 
@@ -23,7 +23,10 @@ public class Ports {
     public static int intake_servo_port = 9;
     public static int shooter_servo_0_port = 0;
     public static int shooter_servo_1_port = 1;
+
+    public static int drive_train_speed_port = 0;
     
     public static int joystick_0_port = 0;
     public static int joystick_1_port = 1;
+
 }

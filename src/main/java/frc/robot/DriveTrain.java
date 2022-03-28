@@ -17,7 +17,7 @@ public class DriveTrain {
         left = new MotorControllerGroup(front_left, back_left);
         right = new MotorControllerGroup(front_right, back_right);
         dt = new DifferentialDrive(left, right);
-
+        
         left.setInverted(false);
         right.setInverted(true);
     }
@@ -25,6 +25,7 @@ public class DriveTrain {
     public void set_speeds(double xSpeed, double zRotation){
         dt.arcadeDrive(xSpeed, zRotation);
     }
+    
 
     public void stop(){
         dt.arcadeDrive(0, 0);

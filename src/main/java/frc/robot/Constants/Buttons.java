@@ -20,4 +20,6 @@ public class Buttons {
     public static int shooter_servo_button = 10;
 
     public static int space_shoot_button = 9;
+
+    public static int limelight_button = 7;
 }
