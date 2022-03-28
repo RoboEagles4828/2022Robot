@@ -9,6 +9,7 @@ import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.*;
@@ -39,11 +40,14 @@ public class DriveTrain {
         dt.arcadeDrive(xSpeed, zRotation);
     }
 
-    public void set_speeds_voltage(double leftSpeed, double rightSpeed, double startingpos){
+    public DifferentialDriveWheelSpeeds set_speeds_voltage(double leftSpeed, double rightSpeed, double startingpos){
         double leftV = feedforward.calculate(leftSpeed);
         double rightV = feedforward.calculate(rightSpeed);
-        left.setVoltage(leftPIDController.calculate(front_left.getSelectedSensorPosition()-startingpos, leftSpeed) + leftV);
-        right.setVoltage(rightPIDController.calculate(front_right.getSelectedSensorPosition()-startingpos, rightSpeed) + rightV);
+        leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-startingpos, leftSpeed) + leftV;
+        rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-startingpos, rightSpeed) + rightV;
+        left.setVoltage(leftV);
+        right.setVoltage(rightV);
+        return new DifferentialDriveWheelSpeeds(leftV, rightV);
         // front_left.feed();
         // front_right.feed();
         // back_left.feed();

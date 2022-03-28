@@ -188,8 +188,8 @@ public class Robot extends TimedRobot {
           goal = trajTest.sample(timer.get());
           auto_chassis_speeds = controller.calculate(pose, goal);
           auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
-          System.out.println(timer.get());
-          System.out.println(auto_speeds);
+          // System.out.println(timer.get());
+          // System.out.println(auto_speeds);
           if(timer.get() >= trajTest.getTotalTimeSeconds()){
             auto_speeds = new DifferentialDriveWheelSpeeds(0, 0);
             intake_speed = 0;
@@ -705,7 +705,8 @@ public class Robot extends TimedRobot {
         break;
     }
 
-    dt.set_speeds(xSpeed, zRotation);//Arcade drive
+    // dt.set_speeds(xSpeed, zRotation);//Arcade drive
+    System.out.println(dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos));
     //dt.set_auto_speeds(xSpeed, zRotation);//Curvature drive
     shooter.set_voltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);
