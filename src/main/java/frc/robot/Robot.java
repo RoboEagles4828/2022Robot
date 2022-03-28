@@ -90,6 +90,7 @@ public class Robot extends TimedRobot {
   String autoSelected;
   Timer timer = new Timer();
   double starting_pos = 0;
+  double start_right_pos = 0;
   int auto_state = 0;
   double auto_start_time = 0;//Only used for auto shooting
   double start_time = 0;//starting time for auto and recycled for auto shoot time
@@ -114,8 +115,8 @@ public class Robot extends TimedRobot {
     chooser.addOption("Three Ball Auto", ThreeBallAuto);
     chooser.addOption("Trajectory test", TrajectoryAuto);
     SmartDashboard.putData("Auto Choices:", chooser);
-    CameraServer.startAutomaticCapture();
-    CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
+    //CameraServer.startAutomaticCapture();
+    //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature    
     //navx.calibrate();
   }
@@ -128,6 +129,7 @@ public class Robot extends TimedRobot {
     timer.reset();
     timer.start();
     starting_pos=dt.front_left.getSelectedSensorPosition();
+    start_right_pos=dt.front_right.getSelectedSensorPosition();
     intake_servo.set(1);
     auto_state=0;
     conveyor_speed=0;
@@ -184,10 +186,11 @@ public class Robot extends TimedRobot {
       case TrajectoryAuto:
         switch(auto_state){
           case 0:
-          intake_speed = Speeds.auto_intake_speed;
+          //intake_speed = Speeds.auto_intake_speed;
           goal = trajTest.sample(timer.get());
           auto_chassis_speeds = controller.calculate(pose, goal);
           auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
+          System.out.println(auto_speeds);
           // System.out.println(timer.get());
           // System.out.println(auto_speeds);
           if(timer.get() >= trajTest.getTotalTimeSeconds()){
@@ -706,7 +709,7 @@ public class Robot extends TimedRobot {
     }
 
     // dt.set_speeds(xSpeed, zRotation);//Arcade drive
-    System.out.println(dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos));
+    dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos, start_right_pos);
     //dt.set_auto_speeds(xSpeed, zRotation);//Curvature drive
     shooter.set_voltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);

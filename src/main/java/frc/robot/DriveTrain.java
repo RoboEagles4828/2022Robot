@@ -31,20 +31,24 @@ public class DriveTrain {
         dt = new DifferentialDrive(left, right);
         front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
         front_right.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
-
         left.setInverted(false);
         right.setInverted(true);
+
+
+        
     }
 
     public void set_speeds(double xSpeed, double zRotation){
         dt.arcadeDrive(xSpeed, zRotation);
     }
 
-    public DifferentialDriveWheelSpeeds set_speeds_voltage(double leftSpeed, double rightSpeed, double startingpos){
+    public DifferentialDriveWheelSpeeds set_speeds_voltage(double leftSpeed, double rightSpeed, double leftStart, double rightStart){
         double leftV = feedforward.calculate(leftSpeed);
         double rightV = feedforward.calculate(rightSpeed);
-        leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-startingpos, leftSpeed) + leftV;
-        rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-startingpos, rightSpeed) + rightV;
+        leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-leftStart, leftSpeed)+ leftV;
+        rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-rightStart, rightSpeed)+ rightV;
+        System.out.println("setvoltage function - left velocity: " + leftV + ", right velocity: " + rightV);
+
         left.setVoltage(leftV);
         right.setVoltage(rightV);
         return new DifferentialDriveWheelSpeeds(leftV, rightV);

@@ -12,7 +12,7 @@ public class Distances {
     public static double kV = 1.89;
     public static double kA = 0.243;
 
-    public static double kp = 9.95;
+    public static double kp = 1;
     public static double ki = 0;
     public static double kd = 0;
 
