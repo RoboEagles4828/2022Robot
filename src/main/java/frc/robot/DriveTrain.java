@@ -34,7 +34,6 @@ public class DriveTrain {
         left.setInverted(false);
         right.setInverted(true);
 
-
         
     }
 
@@ -72,7 +71,6 @@ public class DriveTrain {
     private PIDController rightPIDController = new PIDController(Distances.kp, Distances.ki, Distances.kd);
 
     public Rotation2d getHeading(){
-        System.out.println(navx.getAngle());
         return Rotation2d.fromDegrees(navx.getAngle());
     }
     public double convertMeters(double sensorCounts){

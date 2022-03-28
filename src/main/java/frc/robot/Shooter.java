@@ -1,5 +1,6 @@
 package frc.robot;
 
+import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 
 public class Shooter {
@@ -7,6 +8,7 @@ public class Shooter {
 
     public Shooter(int port){
         shooter = new WPI_TalonSRX(port);
+        shooter.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
     }
 
     public void set_speed(double speed){
@@ -15,6 +17,14 @@ public class Shooter {
 
     public void set_voltage(double voltage){
         shooter.setVoltage(voltage);
+    }
+
+    public double get_velocity(){
+        return shooter.getSelectedSensorVelocity();
+    }
+
+    public double get_pos(){
+        return shooter.getSelectedSensorPosition();
     }
 
     public void stop(){
