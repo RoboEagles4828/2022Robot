@@ -24,7 +24,10 @@ public class Ports {
     public static int intake_servo_port = 9;
     public static int shooter_servo_0_port = 0;
     public static int shooter_servo_1_port = 1;
+
+    public static int drive_train_speed_port = 0;
     
     public static int joystick_0_port = 0;
     public static int joystick_1_port = 1;
+
 }
