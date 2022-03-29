@@ -68,6 +68,7 @@
       "/LiveWindow/Ungrouped/Talon SRX [17]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon SRX [20]": "Motor Controller",
       "/LiveWindow/Ungrouped/Victor SPX [12]": "Motor Controller",
+      "/LiveWindow/Ungrouped/Victor SPX [7]": "Motor Controller",
       "/LiveWindow/Ungrouped/navX-Sensor[4]": "Gyro",
       "/SmartDashboard/Auto Choices:": "String Chooser"
     }
@@ -85,8 +86,5 @@
     "SmartDashboard": {
       "open": true
     }
-  },
-  "NetworkTables View": {
-    "visible": false
   }
 }

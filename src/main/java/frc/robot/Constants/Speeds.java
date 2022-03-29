@@ -25,8 +25,13 @@ public class Speeds {
     public static double auto_field_shoot_speed = 1.0;
     public static double auto_turn_speed = 0.3;
 
-    public static double shooter_volt = -4.6;//-7.4
-    public static double shooter_back_volt = -11.45;//Ratio is 5:12 for front:back for little back spin
+    public static double shooter_volt_far = -6.5;//-7.4, -4.6 for 26inch
+    public static double shooter_volt_close = -4.6;
+    public static double shooter_back_volt_far = -12;//Ratio is 5:12 for front:back for little back spin,-11.45 for 26 inch
+    public static double shooter_back_volt_close = -11.45;
+    public static double raw_shooter_vel_far = 16000;//14750
+    public static double raw_shooter_vel_close = 10500;//10500
+    public static double raw_shooter_back_vel = 30000;//34000, 28000
 
     public static double spacing_speed = 0.3;
 }

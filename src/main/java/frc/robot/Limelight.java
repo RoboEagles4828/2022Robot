@@ -2,12 +2,11 @@ package frc.robot;
 
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
-import edu.wpi.first.networktables.NetworkTableInstance;
 
 public class Limelight {
 
     //main network table
-    private NetworkTable table;
+    public NetworkTable table;
     private NetworkTableEntry tx;
     private NetworkTableEntry ty;
     private NetworkTableEntry ta;
@@ -16,16 +15,16 @@ public class Limelight {
     //distance stuff
     private double mountAngle;
 
-    public Limelight() {
-        table = NetworkTableInstance.getDefault().getTable("limelight");
+    public Limelight(NetworkTable table) {
+        this.table=table;
         tx = table.getEntry("tx");
         ty = table.getEntry("ty");
         ta = table.getEntry("ta");
         tv = table.getEntry("tv");
     }
 
-    public Limelight(double mountAngle) {
-        table = NetworkTableInstance.getDefault().getTable("limelight");
+    public Limelight(NetworkTable table, double mountAngle) {
+        this.table = table;
         tx = table.getEntry("tx");
         ty = table.getEntry("ty");
         ta = table.getEntry("ta");

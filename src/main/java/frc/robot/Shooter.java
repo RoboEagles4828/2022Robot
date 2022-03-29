@@ -27,6 +27,12 @@ public class Shooter {
         return shooter.getSelectedSensorPosition();
     }
 
+    public boolean is_ready(double vel){
+        if(get_velocity()>vel){
+            return true;
+        }
+        return false;
+    }
     public void stop(){
         shooter.set(0);
     }
