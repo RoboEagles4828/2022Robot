@@ -22,7 +22,6 @@ public class Robot extends TimedRobot {
   double xSpeed = 0;
   double zRotation = 0;
   
-  NetworkTableEntry shooterSpeed;
   Shooter shooter = new Shooter();
   boolean manual_shooter = false;
   double shooter_speed = 0;
@@ -498,11 +497,6 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopInit() {
-    Shuffleboard.getTab("DriveData2").add("Large Shooter",Speeds.manual_shooter_speed_high);
-    Shuffleboard.getTab("DriveData2").add("Small Shooter",Speeds.manual_shooter_speed_high);
-    Shuffleboard.getTab("DriveData2").add("Large Shooter2", 1).withWidget(BuiltInWidgets.kNumberSlider).getEntry(); 
-    shooterSpeed = Shuffleboard.getTab("DriveData2").add("Front Left Motor Speed",Speeds.auto_drive_speed).getEntry();
-    
     start_time = 0;
     stop_time = 0;
     intake_speed = 0;
@@ -531,8 +525,6 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     
-    //double currentSpeed = shooterSpeed.getDouble(0.0);
-    //shooter.set_speed(currentSpeed);
     xSpeed = joystick_1.getRawAxis(1) * -1; // make forward stick positive
     zRotation = joystick_1.getRawAxis(2) * 0.55; // WPI Drivetrain uses positive=> right
 
@@ -687,10 +679,8 @@ public class Robot extends TimedRobot {
 
     // Manual Limelight control
     if (joystick_1.getRawButton(Buttons.limelight_button)) {
-      dt.front_left.set(limelight.getAlignmentAdjustment());
-      dt.back_left.set(limelight.getAlignmentAdjustment());
-      dt.front_right.set(-limelight.getAlignmentAdjustment());
-      dt.back_right.set(-limelight.getAlignmentAdjustment());
+      dt.left.set(dt.left.get()+limelight.getAlignmentAdjustment());
+      dt.right.set(dt.right.get()-limelight.getAlignmentAdjustment());
     }
 
     if (joystick_1.getRawButtonReleased(Buttons.limelight_button)) {
