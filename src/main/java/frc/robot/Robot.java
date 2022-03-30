@@ -31,6 +31,15 @@ import frc.robot.Constants.*;
 
 public class Robot extends TimedRobot {
 
+  void stats(Pose2d pose, DifferentialDriveWheelSpeeds teleop_speeds, DriveTrain dt, double start_left, double start_right){
+    System.out.println("X: " + pose.getX() + ", Y: " + pose.getY() + " - rotation " + pose.getRotation().getDegrees());
+    System.out.println("left speed: " + teleop_speeds.leftMetersPerSecond + ", right speed: " + teleop_speeds.rightMetersPerSecond);
+    System.out.println("left voltage: " + dt.front_left.getMotorOutputVoltage() + " V, right voltage: " + dt.front_right.getMotorOutputVoltage());
+    System.out.println("left feedforward: " + dt.getFeedforward().calculate(teleop_speeds.leftMetersPerSecond) + " V, right feedforward: " + dt.getFeedforward().calculate(teleop_speeds.rightMetersPerSecond));
+    System.out.println("left PID: " + dt.getLeftPIDController().calculate(dt.front_left.getSelectedSensorPosition()-start_left, teleop_speeds.leftMetersPerSecond) + ", right PID: " + dt.getRightPIDController().calculate(dt.front_right.getSelectedSensorPosition()-start_right, teleop_speeds.rightMetersPerSecond));
+    dt.set_speeds_voltage(teleop_speeds.leftMetersPerSecond, teleop_speeds.rightMetersPerSecond, start_left, start_right);
+  }
+
   DriveTrain dt = new DriveTrain();
   double xSpeed = 0;
   double zRotation = 0;
@@ -1084,6 +1093,7 @@ public class Robot extends TimedRobot {
       if(!hall_right.get()){
         right_can_climb=false;
       }
+
     }
     
 
@@ -1111,12 +1121,7 @@ public class Robot extends TimedRobot {
     robotHeading.setDouble(pose.getRotation().getRadians());
     isFollowingPath.setBoolean(true);
     teleop_speeds = new DifferentialDriveWheelSpeeds(dt.convertMeters2(dt.front_left.getSelectedSensorVelocity()), dt.convertMeters2(dt.front_right.getSelectedSensorVelocity()));
-    
-    System.out.println("X: " + pose.getX() + ", Y: " + pose.getY() + " - rotation " + pose.getRotation().getDegrees());
-    System.out.println("left speed: " + teleop_speeds.leftMetersPerSecond + ", right speed: " + teleop_speeds.rightMetersPerSecond);
-    System.out.println("left voltage: " + dt.front_left.getMotorOutputVoltage() + " V, right voltage: " + dt.front_right.getMotorOutputVoltage());
-    System.out.println("left feedforward: " + dt.getFeedforward().calculate(teleop_speeds.leftMetersPerSecond) + " V, right feedforward: " + dt.getFeedforward().calculate(teleop_speeds.rightMetersPerSecond));
-    System.out.println("left PID: " + dt.getLeftPIDController().calculate(dt.front_left.getSelectedSensorPosition()-starting_pos, teleop_speeds.leftMetersPerSecond) + ", right PID: " + dt.getRightPIDController().calculate(dt.front_right.getSelectedSensorPosition()-start_right_pos, teleop_speeds.rightMetersPerSecond));
-    dt.set_speeds_voltage(teleop_speeds.leftMetersPerSecond, teleop_speeds.rightMetersPerSecond, starting_pos, start_right_pos);
+    stats(pose, teleop_speeds, dt, starting_pos, start_right_pos);
+
   }
 }
