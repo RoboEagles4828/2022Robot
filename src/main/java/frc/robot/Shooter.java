@@ -3,6 +3,8 @@ package frc.robot;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 
+import frc.robot.Constants.Speeds;
+
 public class Shooter {
     public WPI_TalonSRX shooter;
 
@@ -32,6 +34,13 @@ public class Shooter {
             return true;
         }
         return false;
+    }
+
+    public double get_vel_threshold(double voltage, boolean front){
+        if(front){
+            return Speeds.vel_threshold*(2837.05*voltage-1140.09);//tested equation for front shooter
+        }
+        return Speeds.vel_threshold*(3058.85*voltage-2225.71);//tested equation for back shooter
     }
     public void stop(){
         shooter.set(0);
