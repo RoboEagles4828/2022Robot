@@ -95,8 +95,8 @@ public class Robot extends TimedRobot {
     chooser.addOption("Turn Left", TurnLeft);
     chooser.addOption("Triangle", Triangle);
     SmartDashboard.putData("Auto Choice", chooser);
-    //CameraServer.startAutomaticCapture();
-    //CameraServer.startAutomaticCapture();// Call twice to automatically create both cameras and have them as optional
+    CameraServer.startAutomaticCapture();
+    CameraServer.startAutomaticCapture();// Call twice to automatically create both cameras and have them as optional
                                          // displays
     // dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults
     // to integrated sensor, this is quadrature
