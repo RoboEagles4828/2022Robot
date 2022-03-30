@@ -45,12 +45,12 @@ public class DriveTrain {
     public DifferentialDriveWheelSpeeds set_speeds_voltage(double leftSpeed, double rightSpeed, double leftStart, double rightStart){
         double leftV = feedforward.calculate(leftSpeed);
         double rightV = feedforward.calculate(rightSpeed);
-        //leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-leftStart, leftSpeed)+ leftV;
-        //rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-rightStart, rightSpeed)+ rightV;
-        System.out.println("setvoltage function - left velocity: " + leftV + ", right velocity: " + rightV);
+        leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-leftStart, leftSpeed)+ leftV;
+        rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-rightStart, rightSpeed)+ rightV;
+        System.out.println("setvoltage function - left combined voltage: " + leftV + ", right combined voltage: " + rightV + "\n");
 
-        //left.setVoltage(leftV);
-        //right.setVoltage(rightV);
+        // left.setVoltage(leftV);
+        // right.setVoltage(rightV);
         return new DifferentialDriveWheelSpeeds(leftV, rightV);
         // front_left.feed();
         // front_right.feed();
@@ -72,7 +72,6 @@ public class DriveTrain {
     private PIDController rightPIDController = new PIDController(Distances.kp, Distances.ki, Distances.kd);
 
     public Rotation2d getHeading(){
-        System.out.println(navx.getAngle());
         return Rotation2d.fromDegrees(navx.getAngle());
     }
     public double convertMeters(double sensorCounts){
@@ -107,10 +106,4 @@ public class DriveTrain {
         double mps = Units.inchesToMeters(front_left.getSelectedSensorVelocity()/Distances.encoder_ratio)*10;
         return mps;
     }
-
-
-    // public DifferentialDriveWheelSpeeds getSpeeds(){
-        
-    //     return new DifferentialDriveWheelSpeeds(Units.inchesToMeters(front_left.getSelectedSensorVelocity() * Distances.encoder_ratio)/60, Units.inchesToMeters(front_right.getSelectedSensorVelocity() * Distances.encoder_ratio)/60);
-    // }
 }

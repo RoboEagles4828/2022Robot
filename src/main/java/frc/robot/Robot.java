@@ -12,11 +12,17 @@ import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.math.controller.RamseteController;
 import edu.wpi.first.math.geometry.Pose2d;
-
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryUtil;
+import edu.wpi.first.math.trajectory.constraint.DifferentialDriveVoltageConstraint;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -33,7 +39,8 @@ public class Robot extends TimedRobot {
   Trajectory trajTest = new Trajectory();
   Trajectory threeBall = new Trajectory();
   // TrajectoryConfig config = new TrajectoryConfig(Units.feetToMeters(Distances.max_vel), Units.feetToMeters(Distances.max_acc)).setKinematics(dt.kin);
-
+  DifferentialDriveVoltageConstraint autoVoltageConstraint = new DifferentialDriveVoltageConstraint(dt.getFeedforward(), dt.kin, 12);
+  
   ChassisSpeeds auto_chassis_speeds = new ChassisSpeeds();
   DifferentialDriveWheelSpeeds auto_speeds = new DifferentialDriveWheelSpeeds();
   RamseteController controller = new RamseteController();  
@@ -75,6 +82,8 @@ public class Robot extends TimedRobot {
   AHRS navx = new AHRS();
   double starting_angle = 0;
 
+  DifferentialDriveWheelSpeeds teleop_speeds = new DifferentialDriveWheelSpeeds();
+  
   static final String DefaultAuto = "Default";
   static final String BasicAuto = "DriveShoot";
   static final String DriveAuto = "Drive";
@@ -101,6 +110,11 @@ public class Robot extends TimedRobot {
   double conveyor_index_time = 0;
   boolean is_spacing = false;
 
+  double spoofX = 0;
+  double spoofY = 0;
+
+  NetworkTableEntry robotX, robotY, robotHeading, pathX, pathY, isFollowingPath;
+
   @Override
   public void robotInit(){
     chooser.setDefaultOption("Default Auto", DefaultAuto);
@@ -116,6 +130,16 @@ public class Robot extends TimedRobot {
     chooser.addOption("Three Ball Auto", ThreeBallAuto);
     chooser.addOption("Trajectory test", TrajectoryAuto);
     SmartDashboard.putData("Auto Choices:", chooser);
+    NetworkTableInstance inst = NetworkTableInstance.getDefault();
+    NetworkTable dashboard_info = inst.getTable("Live_Dashboard");
+    robotX = dashboard_info.getEntry("robotX");
+    robotY = dashboard_info.getEntry("robotY");
+    robotHeading = dashboard_info.getEntry("robotHeading");
+
+    pathX = dashboard_info.getEntry("pathX");
+    pathY = dashboard_info.getEntry("pathY");
+    isFollowingPath = dashboard_info.getEntry("isFollowingTrajectory");
+    
     //CameraServer.startAutomaticCapture();
     //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature    
@@ -144,7 +168,7 @@ public class Robot extends TimedRobot {
     //loading PathWeaver json files from deploy directory
     Path ThreeBallPath = Filesystem.getDeployDirectory().toPath();
     try {
-      ThreeBallPath = Filesystem.getDeployDirectory().toPath().resolve("paths/3ball.wpilib.json");
+      ThreeBallPath = Filesystem.getDeployDirectory().toPath().resolve("paths/output/3ball.wpilib.json");
       System.out.println("                              " + Filesystem.getDeployDirectory().getName());
       threeBall = TrajectoryUtil.fromPathweaverJson(ThreeBallPath);
     } catch (IOException ex) {
@@ -153,19 +177,28 @@ public class Robot extends TimedRobot {
 
     Path trajectoryPath = Filesystem.getDeployDirectory().toPath();
     try {
-     trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve("paths/Unnamed.wpilib.json");
+     trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve("paths/output/Unnamed.wpilib.json");
      System.out.println("                              " + Filesystem.getDeployDirectory().getName());
      trajTest = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
   } catch (IOException ex) {
       DriverStation.reportError("Unable to open trajectory: " + trajectoryPath, ex.getStackTrace());
     }
+    switch(autoSelected){
+      case TrajectoryAuto:
+        dt.odom.resetPosition(new Pose2d(new Translation2d(Units.metersToFeet(trajTest.getInitialPose().getX()), Units.metersToFeet(trajTest.getInitialPose().getY())), trajTest.getInitialPose().getRotation()), trajTest.getInitialPose().getRotation());
+        break;
+      case ThreeBallAuto:
+        dt.odom.resetPosition(new Pose2d(new Translation2d(Units.metersToFeet(threeBall.getInitialPose().getX()), Units.metersToFeet(threeBall.getInitialPose().getY())), threeBall.getInitialPose().getRotation()), threeBall.getInitialPose().getRotation());
+        break;
+    }
+
   }
 
   @Override
   public void autonomousPeriodic(){
+
     pose = dt.odom.update(dt.getHeading(), dt.convertMeters(dt.front_left.getSelectedSensorPosition()-starting_pos), dt.convertMeters(dt.front_right.getSelectedSensorPosition()-starting_pos));
     Trajectory.State goal = new Trajectory.State();
-
 
     //If ball detected make conveyor move to pull it
     if(prox_lower.get()){
@@ -180,20 +213,28 @@ public class Robot extends TimedRobot {
       conveyor_speed=0;
     }
 
-    // System.out.println(xSpeed);
-    // System.out.println(navx.getAngle());
     //Determine what auto to run
+
     switch(autoSelected){
       case TrajectoryAuto:
         switch(auto_state){
           case 0:
-          //intake_speed = Speeds.auto_intake_speed;
+          //intake_speed = Speeds.auto_intake_speed;f
           goal = trajTest.sample(timer.get());
+          // if(timer.get() > 0.1){
+          //   pose = trajTest.sample(timer.get()-0.1).poseMeters;
+          // }
           auto_chassis_speeds = controller.calculate(pose, goal);
+          System.out.println(auto_chassis_speeds);
+          robotX.setDouble(Units.metersToFeet(pose.getX()));
+          robotY.setDouble(Units.metersToFeet(pose.getY()));
+          robotHeading.setDouble(pose.getRotation().getRadians());
+          pathX.setDouble(Units.metersToFeet(goal.poseMeters.getX()));
+          pathY.setDouble(Units.metersToFeet(goal.poseMeters.getY()));
+          isFollowingPath.setBoolean(true);
+          System.out.println("X: " + pose.getX() + ", Y: " + pose.getY() + " - rotation " + pose.getRotation().getDegrees());
           auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
           System.out.println(auto_speeds);
-          // System.out.println(timer.get());
-          // System.out.println(auto_speeds);
           if(timer.get() >= trajTest.getTotalTimeSeconds()){
             auto_speeds = new DifferentialDriveWheelSpeeds(0, 0);
             intake_speed = 0;
@@ -276,10 +317,21 @@ public class Robot extends TimedRobot {
             case 1:
               intake_speed = Speeds.auto_intake_speed;
               goal = threeBall.sample(timer.get()-Times.wall_shoot_time);
+              // if(timer.get()-Times.wall_shoot_time > 0.01){
+              //   pose = threeBall.sample(timer.get()-Times.wall_shoot_time-0.01).poseMeters;
+              // }
               System.out.println(timer.get()-Times.wall_shoot_time);
-              // System.out.println(Double.toString(pose.getX()) + ", " + pose.getY() + " - rotation " + pose.getRotation().getDegrees());
               auto_chassis_speeds = controller.calculate(pose, goal);
+              System.out.println(auto_chassis_speeds);
+              System.out.println(Double.toString(pose.getX()) + ", " + pose.getY() + " - rotation " + pose.getRotation().getDegrees());
               auto_speeds = dt.kin.toWheelSpeeds(auto_chassis_speeds);
+              robotX.setDouble(Units.metersToFeet(pose.getX()));
+              robotY.setDouble(Units.metersToFeet(pose.getY()));
+              robotHeading.setDouble(pose.getRotation().getRadians());
+              pathX.setDouble(Units.metersToFeet(goal.poseMeters.getX()));
+              pathY.setDouble(Units.metersToFeet(goal.poseMeters.getY()));
+              isFollowingPath.setBoolean(true);
+              System.out.println(auto_speeds);
               if(timer.get()-Times.wall_shoot_time >= threeBall.getTotalTimeSeconds()){
                 auto_speeds = new DifferentialDriveWheelSpeeds(0.0, 0.0);
                 intake_speed = 0;
@@ -708,9 +760,12 @@ public class Robot extends TimedRobot {
             }
         break;
     }
-
-    dt.set_speeds(xSpeed, zRotation);//Arcade drive
-    //dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos, start_right_pos);
+    if(autoSelected == ThreeBallAuto || autoSelected == TrajectoryAuto){
+      dt.set_speeds_voltage(auto_speeds.leftMetersPerSecond, auto_speeds.rightMetersPerSecond, starting_pos, start_right_pos);
+    }
+    else{
+      dt.set_speeds(xSpeed, zRotation);//Arcade drive
+    }
     //dt.set_auto_speeds(xSpeed, zRotation);//Curvature drive
     shooter.set_voltage(shooter_speed);
     conveyor.set_speed(conveyor_speed);
@@ -726,6 +781,8 @@ public class Robot extends TimedRobot {
     timer.reset();
     timer.start();
     first=true;
+    starting_pos = dt.front_left.getSelectedSensorPosition();
+    start_right_pos = dt.front_right.getSelectedSensorPosition();
     /* factory default values */
     /*_talonL.configFactoryDefault();
     _talonR.configFactoryDefault();*/
@@ -741,10 +798,11 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
+    pose = dt.odom.update(dt.getHeading(), dt.convertMeters(dt.front_left.getSelectedSensorPosition()-starting_pos), dt.convertMeters(dt.front_right.getSelectedSensorPosition()-starting_pos));
+    
     xSpeed = joystick_1.getRawAxis(1) * -1; // make forward stick positive
     zRotation = joystick_1.getRawAxis(2)*0.55; // WPI Drivetrain uses positive=> right Arcade Drive
     //zRotation = joystick_1.getRawAxis(2);//Curvature Drive
-
     if(joystick_0.getThrottle()>0.5){
       climber_mode=true;
     }else{
@@ -1031,13 +1089,14 @@ public class Robot extends TimedRobot {
 
     //Executes all speeds
     dt.set_speeds(xSpeed, zRotation);
+    
     //dt.set_auto_speeds(xSpeed, zRotation);//Curvature
     shooter.set_voltage(shooter_speed);
     shooter_back.set_voltage(shooter_back_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
-    System.out.println("Shooter: "+shooter.shooter.getMotorOutputVoltage());
-    System.out.println("Back: "+shooter_back.shooter.getMotorOutputVoltage());
+    // System.out.println("Shooter: "+shooter.shooter.getMotorOutputVoltage());
+    // System.out.println("Back: "+shooter_back.shooter.getMotorOutputVoltage());
 
     if(state==0){
       climber.set_speeds(left_climber_speed, right_climber_speed);
@@ -1046,5 +1105,18 @@ public class Robot extends TimedRobot {
     }else if(state==2){
       climber.set_speeds(0, right_climber_speed);
     }
+    
+    robotX.setDouble(Units.metersToFeet(pose.getX()));
+    robotY.setDouble(Units.metersToFeet(pose.getY()));
+    robotHeading.setDouble(pose.getRotation().getRadians());
+    isFollowingPath.setBoolean(true);
+    teleop_speeds = new DifferentialDriveWheelSpeeds(dt.convertMeters2(dt.front_left.getSelectedSensorVelocity()), dt.convertMeters2(dt.front_right.getSelectedSensorVelocity()));
+    
+    System.out.println("X: " + pose.getX() + ", Y: " + pose.getY() + " - rotation " + pose.getRotation().getDegrees());
+    System.out.println("left speed: " + teleop_speeds.leftMetersPerSecond + ", right speed: " + teleop_speeds.rightMetersPerSecond);
+    System.out.println("left voltage: " + dt.front_left.getMotorOutputVoltage() + " V, right voltage: " + dt.front_right.getMotorOutputVoltage());
+    System.out.println("left feedforward: " + dt.getFeedforward().calculate(teleop_speeds.leftMetersPerSecond) + " V, right feedforward: " + dt.getFeedforward().calculate(teleop_speeds.rightMetersPerSecond));
+    System.out.println("left PID: " + dt.getLeftPIDController().calculate(dt.front_left.getSelectedSensorPosition()-starting_pos, teleop_speeds.leftMetersPerSecond) + ", right PID: " + dt.getRightPIDController().calculate(dt.front_right.getSelectedSensorPosition()-start_right_pos, teleop_speeds.rightMetersPerSecond));
+    dt.set_speeds_voltage(teleop_speeds.leftMetersPerSecond, teleop_speeds.rightMetersPerSecond, starting_pos, start_right_pos);
   }
 }
