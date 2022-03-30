@@ -6,8 +6,8 @@ import edu.wpi.first.wpilibj.motorcontrol.*;
 import frc.robot.Constants.*;
 
 public class DriveTrain {
-    private MotorControllerGroup left;
-    private MotorControllerGroup right;
+    public MotorControllerGroup left;
+    public MotorControllerGroup right;
     private DifferentialDrive dt;
     public WPI_TalonFX front_left = new WPI_TalonFX(Ports.front_left_port);
     public WPI_TalonFX back_left = new WPI_TalonFX(Ports.back_left_port);
