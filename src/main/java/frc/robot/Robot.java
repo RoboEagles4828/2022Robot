@@ -156,8 +156,8 @@ public class Robot extends TimedRobot {
     // SmartDashboard.putNumber("Shooter/Front Shooter Velocity", shooter.get_velocity());
     // SmartDashboard.putNumber("Shooter/Back Shooter Velocity", shooter_back.get_velocity());
     //Shuffleboard.getTab("Shooter").add("Large Shooter2", 1).withWidget(BuiltInWidgets.kNumberSlider).getEntry();
-    //CameraServer.startAutomaticCapture();
-    //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
+    CameraServer.startAutomaticCapture();
+    CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature    
     //navx.calibrate();
   }
