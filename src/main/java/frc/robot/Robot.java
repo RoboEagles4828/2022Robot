@@ -33,7 +33,7 @@ public class Robot extends TimedRobot {
 
   void stats(Pose2d pose, DifferentialDriveWheelSpeeds teleop_speeds, DriveTrain dt, double start_left, double start_right){
     System.out.println("X: " + pose.getX() + ", Y: " + pose.getY() + " - rotation " + pose.getRotation().getDegrees());
-    System.out.println("left speed: " + teleop_speeds.leftMetersPerSecond + ", right speed: " + teleop_speeds.rightMetersPerSecond);
+    System.out.println("left speed: " + dt.getLVel() + ", right speed: " + dt.getRVel());
     System.out.println("left voltage: " + dt.front_left.getMotorOutputVoltage() + " V, right voltage: " + dt.front_right.getMotorOutputVoltage());
     System.out.println("left feedforward: " + dt.getFeedforward().calculate(teleop_speeds.leftMetersPerSecond) + " V, right feedforward: " + dt.getFeedforward().calculate(teleop_speeds.rightMetersPerSecond));
     System.out.println("left PID: " + dt.getLeftPIDController().calculate(dt.front_left.getSelectedSensorPosition()-start_left, teleop_speeds.leftMetersPerSecond) + ", right PID: " + dt.getRightPIDController().calculate(dt.front_right.getSelectedSensorPosition()-start_right, teleop_speeds.rightMetersPerSecond));
@@ -808,7 +808,11 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     pose = dt.odom.update(dt.getHeading(), dt.convertMeters(dt.front_left.getSelectedSensorPosition()-starting_pos), dt.convertMeters(dt.front_right.getSelectedSensorPosition()-starting_pos));
-    
+    robotX.setDouble(Units.metersToFeet(pose.getX()));
+    robotY.setDouble(Units.metersToFeet(pose.getY()));
+    robotHeading.setDouble(pose.getRotation().getRadians());
+    isFollowingPath.setBoolean(true);
+
     xSpeed = joystick_1.getRawAxis(1) * -1; // make forward stick positive
     zRotation = joystick_1.getRawAxis(2)*0.55; // WPI Drivetrain uses positive=> right Arcade Drive
     //zRotation = joystick_1.getRawAxis(2);//Curvature Drive
@@ -985,6 +989,70 @@ public class Robot extends TimedRobot {
       conveyor_speed=0;
     }
 
+    if(!climber_mode){
+
+      //1 m/s motor speed test
+      if (joystick_0.getRawButton(Buttons.manual_climber_button)){
+        teleop_speeds = new DifferentialDriveWheelSpeeds(1, 1);
+      }
+
+      //turn off motors
+      if (joystick_0.getRawButtonReleased(Buttons.manual_climber_button)){
+        teleop_speeds = new DifferentialDriveWheelSpeeds(0, 0);
+      }
+
+      // 2 m/s motor speed test
+      if (joystick_0.getRawButton(Buttons.manual_rev_climber_button)){
+        teleop_speeds = new DifferentialDriveWheelSpeeds(2, 2);
+      }
+
+      //turn off motors
+      if (joystick_0.getRawButtonReleased(Buttons.manual_rev_climber_button)){
+        teleop_speeds = new DifferentialDriveWheelSpeeds(0, 0);
+      }
+
+      // 3 m/s motor speed test
+      if (joystick_0.getRawButton(Buttons.manual_left_climber_button)){
+        teleop_speeds = new DifferentialDriveWheelSpeeds(3, 3);
+      }
+
+      //Stop left climber when not manually controlled
+      if (joystick_0.getRawButtonReleased(Buttons.manual_left_climber_button)){
+        teleop_speeds = new DifferentialDriveWheelSpeeds(0, 0);
+      }
+
+      if (joystick_0.getRawButton(Buttons.manual_rev_left_climber_button)){
+        ChassisSpeeds setpoint = new ChassisSpeeds(1, 0, Math.PI/6.0);
+        teleop_speeds = dt.kin.toWheelSpeeds(setpoint);
+      }
+
+      if (joystick_0.getRawButtonReleased(Buttons.manual_rev_left_climber_button)){
+        teleop_speeds = new DifferentialDriveWheelSpeeds(0, 0);
+      }
+      
+      //Manually control right climber
+      if (joystick_0.getRawButton(Buttons.manual_right_climber_button)){
+        ChassisSpeeds setpoint = new ChassisSpeeds(1, 0, -Math.PI/6.0);
+        teleop_speeds = dt.kin.toWheelSpeeds(setpoint);
+      }
+
+      //Stop right climber when not manually controlled
+      if (joystick_0.getRawButtonReleased(Buttons.manual_right_climber_button)){
+        teleop_speeds = new DifferentialDriveWheelSpeeds(0, 0);
+      }
+
+      //Manually control right climber backwards
+      if (joystick_0.getRawButton(Buttons.manual_rev_right_climber_button)){
+        ChassisSpeeds setpoint = new ChassisSpeeds(2, 0, Math.PI/8.0);
+        teleop_speeds = dt.kin.toWheelSpeeds(setpoint);
+      }
+
+      //Stop right climber when not manually controlled backwards
+      if (joystick_0.getRawButtonReleased(Buttons.manual_rev_right_climber_button)){
+        teleop_speeds = new DifferentialDriveWheelSpeeds(0, 0);
+      }
+
+    }
 
     //Toggled buttons for climbing
     if(climber_mode){
@@ -1093,12 +1161,12 @@ public class Robot extends TimedRobot {
       if(!hall_right.get()){
         right_can_climb=false;
       }
-
+      
     }
     
 
     //Executes all speeds
-    dt.set_speeds(xSpeed, zRotation);
+    // dt.set_speeds(xSpeed, zRotation);
     
     //dt.set_auto_speeds(xSpeed, zRotation);//Curvature
     shooter.set_voltage(shooter_speed);
@@ -1116,12 +1184,6 @@ public class Robot extends TimedRobot {
       climber.set_speeds(0, right_climber_speed);
     }
     
-    robotX.setDouble(Units.metersToFeet(pose.getX()));
-    robotY.setDouble(Units.metersToFeet(pose.getY()));
-    robotHeading.setDouble(pose.getRotation().getRadians());
-    isFollowingPath.setBoolean(true);
-    teleop_speeds = new DifferentialDriveWheelSpeeds(dt.convertMeters2(dt.front_left.getSelectedSensorVelocity()), dt.convertMeters2(dt.front_right.getSelectedSensorVelocity()));
     stats(pose, teleop_speeds, dt, starting_pos, start_right_pos);
-
   }
 }

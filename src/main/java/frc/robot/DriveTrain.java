@@ -42,16 +42,15 @@ public class DriveTrain {
         dt.arcadeDrive(xSpeed, zRotation);
     }
 
-    public DifferentialDriveWheelSpeeds set_speeds_voltage(double leftSpeed, double rightSpeed, double leftStart, double rightStart){
+    public void set_speeds_voltage(double leftSpeed, double rightSpeed, double leftStart, double rightStart){
         double leftV = feedforward.calculate(leftSpeed);
         double rightV = feedforward.calculate(rightSpeed);
         leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-leftStart, leftSpeed)+ leftV;
         rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-rightStart, rightSpeed)+ rightV;
         System.out.println("setvoltage function - left combined voltage: " + leftV + ", right combined voltage: " + rightV + "\n");
 
-        // left.setVoltage(leftV);
-        // right.setVoltage(rightV);
-        return new DifferentialDriveWheelSpeeds(leftV, rightV);
+        left.setVoltage(leftV);
+        right.setVoltage(rightV);
         // front_left.feed();
         // front_right.feed();
         // back_left.feed();
@@ -102,8 +101,13 @@ public class DriveTrain {
         return mps;
     }
 
-    public double getVel2(){
+    public double getLVel(){
         double mps = Units.inchesToMeters(front_left.getSelectedSensorVelocity()/Distances.encoder_ratio)*10;
+        return mps;
+    }
+
+    public double getRVel(){
+        double mps = Units.inchesToMeters(front_right.getSelectedSensorVelocity()/Distances.encoder_ratio)*10;
         return mps;
     }
 }
