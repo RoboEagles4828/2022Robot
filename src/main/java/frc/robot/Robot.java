@@ -7,8 +7,6 @@ package frc.robot;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import javax.print.attribute.standard.PresentationDirection;
-
 import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.cameraserver.CameraServer;
@@ -72,7 +70,7 @@ public class Robot extends TimedRobot {
   boolean right_can_climb = true;// Hall effects allow to climb up on right
   int state = 0;// 0 is both, 1 is left, 2 is right
 
-  NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
+  NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight-roboeag");
   Limelight limelight = new Limelight(table, 30);
 
   DigitalInput prox_lower = new DigitalInput(Ports.proxy_lower);
@@ -753,7 +751,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopInit() {
-    limelight.setLEDState(1);//turn off so everyone isnt blinded
+    limelight.setLEDState(0);//turn off so everyone isnt blinded
     System.out.println(limelight.table.getEntry("ledMode").getDouble(0));
     //shooterSpeed = Shuffleboard.getTab("Shooter").add("Front Left Motor Speed",Speeds.auto_drive_speed).getEntry();
     start_time = 0;
@@ -876,8 +874,8 @@ public class Robot extends TimedRobot {
       // backReadyNT.setBoolean(shooter_back.is_ready(shooter_back.get_vel_threshold(false)));
       frontReadyNT.setBoolean(shooter.is_ready(shooter.get_vel_threshold(true)));
       backReadyNT.setBoolean(shooter_back.is_ready());
-      if(shooter.get_velocity()>=shooter.get_vel_threshold(true)&&//If front is at desired velocity
-      shooter_back.get_velocity()>=shooter_back.get_vel_threshold(false)){//If back is at desired velocity
+      if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+      shooter_back.is_ready()){//If back is at desired velocity
         conveyor_speed=Speeds.conveyor_shoot_speed;
         manual_conveyor=true;
       }else{
@@ -1041,15 +1039,16 @@ public class Robot extends TimedRobot {
       manual_conveyor = false;
       conveyor_speed = 0;
     }
-
+    System.out.println("Axis : "+joystick_1.getRawAxis(2));
     // Manual Limelight control
     if (joystick_1.getRawButton(Buttons.limelight_button)) {
-      dt.left.set(limelight.getAlignmentAdjustment());
-      dt.right.set(limelight.getAlignmentAdjustment());
+      System.out.println("Speeds: "+dt.get_raw_speeds(limelight.getAlignmentAdjustment()));
+      zRotation=dt.get_raw_speeds(limelight.getAlignmentAdjustment());
+      System.out.println(limelight.getAlignmentAdjustment());
     }
 
     if (joystick_1.getRawButtonReleased(Buttons.limelight_button)) {
-      dt.stop();
+      zRotation=0;
     }
 
     // Toggled buttons for climbing

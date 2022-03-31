@@ -27,7 +27,7 @@ public class Speeds {
 
     public static double vel_threshold = 0.95;
     public static double shooter_volt_far = -6.5;//-7.4, -4.6 for 26inch
-    public static double shooter_volt_close = -4.6;
+    public static double shooter_volt_close = -3.7;
     public static double shooter_back_volt_far = -11.45;//Ratio is 5:12 for front:back for little back spin,-11.45 for 26 inch
     public static double shooter_back_volt_close = -11.45;
     public static double raw_shooter_vel_far = vel_threshold*(2837.05*shooter_back_volt_far-1140.09);//14750

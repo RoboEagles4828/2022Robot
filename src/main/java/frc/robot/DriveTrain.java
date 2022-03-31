@@ -40,6 +40,18 @@ public class DriveTrain {
     public void set_speeds(double xSpeed, double zRotation){
         dt.arcadeDrive(xSpeed, zRotation);
     }
+
+    public double get_raw_speeds(double speed){
+        int pos_neg = 1;
+        if(speed<0){
+            pos_neg=-1;
+            speed=speed*-1;
+        }
+        if(speed<0.05){return 0;}
+        int x = (int)(0.4/speed);
+        x++;
+        return speed*x*pos_neg;
+    }
     
 
     public DifferentialDriveWheelSpeeds set_speeds_voltage(double leftSpeed, double rightSpeed, double leftStart, double rightStart){
