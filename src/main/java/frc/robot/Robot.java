@@ -968,12 +968,12 @@ public class Robot extends TimedRobot {
       // Climber Controls
       // Manually control climber
       if (joystick_0.getRawButton(Buttons.manual_climber_button)) {
-        if (left_can_climb_up||!prev_dir) {
+        if (left_can_climb_up) {
           left_climber_speed = Speeds.manual_left_climber_speed_up;
         } else {
           left_climber_speed = 0;
         }
-        if (right_can_climb_up||!prev_dir) {
+        if (right_can_climb_up) {
           right_climber_speed = Speeds.manual_right_climber_speed_up;
         } else {
           right_climber_speed = 0;
@@ -982,23 +982,23 @@ public class Robot extends TimedRobot {
         right_can_climb_down = true;
         state = 0;
       }
-
+      
       // Stop climber when not manually controlled
       if (joystick_0.getRawButtonReleased(Buttons.manual_climber_button)) {
         left_climber_speed = 0;
         right_climber_speed = 0;
-        prev_dir=true;
+
         state = 0;
       }
 
       // Manually control climber backwards
       if (joystick_0.getRawButton(Buttons.manual_rev_climber_button)) {
-        if(left_can_climb_down||prev_dir){
+        if(left_can_climb_down){
           left_climber_speed = -Speeds.manual_left_climber_speed_down;
         }else{
           left_climber_speed = 0;
         }
-        if(right_can_climb_down||prev_dir){
+        if(right_can_climb_down){
           right_climber_speed = -Speeds.manual_right_climber_speed_down;
         }else{
           right_climber_speed = 0;
@@ -1012,13 +1012,12 @@ public class Robot extends TimedRobot {
       if (joystick_0.getRawButtonReleased(Buttons.manual_rev_climber_button)) {
         left_climber_speed = 0;
         right_climber_speed = 0;
-        prev_dir=false;
         state = 0;
       }
 
       // Manually control left climber
       if (joystick_0.getRawButton(Buttons.manual_left_climber_button)) {
-        if (left_can_climb_up||!prev_dir) {
+        if (left_can_climb_up) {
           left_climber_speed = Speeds.manual_left_climber_speed_up;
         } else {
           left_climber_speed = 0;
@@ -1030,13 +1029,12 @@ public class Robot extends TimedRobot {
       // Stop left climber when not manually controlled
       if (joystick_0.getRawButtonReleased(Buttons.manual_left_climber_button)) {
         left_climber_speed = 0;
-        prev_dir=true;
         state = 1;
       }
 
       // Manually control left climber backwards
       if (joystick_0.getRawButton(Buttons.manual_rev_left_climber_button)) {
-        if(left_can_climb_down||prev_dir){
+        if(left_can_climb_down){
           left_climber_speed = -Speeds.manual_left_climber_speed_down;
         }else{
           left_climber_speed=0;
@@ -1048,13 +1046,12 @@ public class Robot extends TimedRobot {
       // Stop left climber when not manually controlled backwards
       if (joystick_0.getRawButtonReleased(Buttons.manual_rev_left_climber_button)) {
         left_climber_speed = 0;
-        prev_dir=false;
         state = 1;
       }
 
       // Manually control right climber
       if (joystick_0.getRawButton(Buttons.manual_right_climber_button)) {
-        if (right_can_climb_up||!prev_dir) {
+        if (right_can_climb_up) {
           right_climber_speed = Speeds.manual_right_climber_speed_up;
         } else {
           right_climber_speed = 0;
@@ -1066,13 +1063,12 @@ public class Robot extends TimedRobot {
       // Stop right climber when not manually controlled
       if (joystick_0.getRawButtonReleased(Buttons.manual_right_climber_button)) {
         right_climber_speed = 0;
-        prev_dir=true;
         state = 2;
       }
 
       // Manually control right climber backwards
       if (joystick_0.getRawButton(Buttons.manual_rev_right_climber_button)) {
-        if(right_can_climb_down||prev_dir){
+        if(right_can_climb_down){
           right_climber_speed = -Speeds.manual_right_climber_speed_down;
         }else{
           right_can_climb_up = true;
@@ -1083,7 +1079,6 @@ public class Robot extends TimedRobot {
       // Stop right climber when not manually controlled backwards
       if (joystick_0.getRawButtonReleased(Buttons.manual_rev_right_climber_button)) {
         right_climber_speed = 0;
-        prev_dir=false;
         state = 2;
       }
 
