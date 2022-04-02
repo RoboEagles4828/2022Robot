@@ -23,7 +23,8 @@ public class Distances {
 
     public static double default_drive = 80;
     public static double tarmac_to_ball = 43;
-    public static double bot_ball_to_ball = 105;
+    public static double ball_to_line = 20;
+    public static double bot_ball_to_ball = 110;
     public static double ball_to_ball_angle = 100;
     public static double ball_to_goal_angle = 60;
     public static double sec_ball_to_goal = 55;

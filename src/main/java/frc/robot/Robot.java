@@ -72,6 +72,9 @@ public class Robot extends TimedRobot {
   boolean right_can_climb_down=true;
   boolean left_going_up = true; //is it going up
   boolean right_going_up = true;
+  boolean override_climber = true;
+  boolean left_can_climb = true;
+  boolean right_can_climb = true;
   int state = 0;// 0 is both, 1 is left, 2 is right
   int left_climber_pos = 0; // 0 is bottom, 1 is middle, 2 is top
   int right_climber_pos = 0;
@@ -395,10 +398,9 @@ public class Robot extends TimedRobot {
               }
               break;
             case 2://Drive back to shoot and start reving up shooter
-              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.ball_to_wall*Distances.encoder_ratio){
+              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.ball_to_line*Distances.encoder_ratio){
                 xSpeed=-Speeds.auto_drive_speed;
-                shooter_speed=Speeds.shooter_volt_close;
-                shooter_back_speed=Speeds.shooter_back_volt_close;
+                shooter_speed=Speeds.idle_shooter_speed;
               }else{
                 auto_state++;
                 stop_time=timer.get();
@@ -415,39 +417,14 @@ public class Robot extends TimedRobot {
               }
               break;
             case 4://Shoot
-              if(timer.get()-start_time<Times.wall_shoot_time){
-                shooter_speed=Speeds.shooter_volt_close;
-                shooter_back_speed=Speeds.shooter_back_volt_close;
-                  if(first){
-                    conveyor_speed=Speeds.conveyor_shoot_speed;
-                    manual_conveyor=true;
-                  }else{
-                    if(timer.get()-start_time>=Times.conveyor_delay){
-                      conveyor_speed=Speeds.conveyor_shoot_speed;
-                      manual_conveyor=true;
-                    }else{
-                      conveyor_speed=0;
-                      manual_conveyor=false;
-                    }
-                  }
-                  if(!detected&&!prox_upper.get()){//Detects a ball as first ball
-                    detected=true;
-                  }else if(detected&&prox_upper.get()){//Not at proxy and has been detected, aka the first ball left
-                    start_time=timer.get();
-                    detected=false;
-                    first=false;
-                  }
-                  manual_shooter = true;
-              }else{
-                manual_shooter=false;
-                manual_conveyor=false;
-                detected=false;
-                first=true;
-                shooter_speed=0;
-                shooter_back_speed=0;
-                conveyor_speed=0;
-                auto_state++;
+              shooter_speed=Speeds.shooter_volt_far;
+              shooter_back_speed=Speeds.shooter_back_volt_far;
+              if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+              shooter_back.is_ready()){
+                conveyor_speed=Speeds.conveyor_shoot_speed;
+                manual_conveyor=true;
               }
+                manual_shooter = true;
               break;
           }
           break;
@@ -455,7 +432,8 @@ public class Robot extends TimedRobot {
           switch (auto_state) {
             case 0:
               if (timer.get() < Times.wall_shoot_time) {
-                shooter_speed = Speeds.wall_shooter_speed;
+                shooter_speed = Speeds.shooter_volt_close;
+                shooter_back_speed = Speeds.shooter_back_volt_close;;
                 manual_shooter = true;
                 if (timer.get() > Times.conveyor_first_delay) {
                   conveyor_speed = Speeds.conveyor_shoot_speed;
@@ -463,7 +441,7 @@ public class Robot extends TimedRobot {
                 }
               } else {
                 conveyor_speed = 0;
-                shooter_speed = 0;
+                shooter_back_speed=0;
                 manual_conveyor = false;
                 manual_shooter = false;
                 auto_state++;
@@ -499,20 +477,14 @@ public class Robot extends TimedRobot {
               }
               break;
             case 4:
-              if (timer.get() - start_time < Times.wall_shoot_time) {
-                shooter_speed = Speeds.wall_shooter_speed;
-                manual_shooter = true;
-                if (timer.get() - start_time > Times.conveyor_first_delay) {
-                  conveyor_speed = Speeds.conveyor_shoot_speed;
-                  manual_conveyor = true;
-                }
-              } else {
-                conveyor_speed = 0;
-                shooter_speed = 0;
-                manual_conveyor = false;
-                manual_shooter = false;
-                auto_state++;
+              shooter_speed=Speeds.shooter_volt_close;
+              shooter_back_speed=Speeds.shooter_back_volt_close;
+              if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+              shooter_back.is_ready()){
+                conveyor_speed=Speeds.conveyor_shoot_speed;
+                manual_conveyor=true;
               }
+                manual_shooter = true;
               break;
           }
           break;
@@ -770,11 +742,11 @@ public class Robot extends TimedRobot {
     // SmartDashboard.putNumber("Shooter/Back Shooter Velocity", shooter_back.get_velocity());
     // frontVelNT.setDouble(shooter.get_velocity());
     // backVelNT.setDouble(shooter_back.get_velocity());
-    // frontVoltNT.setDouble(shooter.shooter.getMotorOutputVoltage());
+    frontVoltNT.setDouble(shooter.shooter.getMotorOutputVoltage());
     // backVoltNT.setDouble(shooter_back.shooter.getMotorOutputVoltage());
     //shooter_speed=Speeds.shooter_volt_close;
     xSpeed = joystick_1.getRawAxis(1) * -1; // make forward stick positive
-    zRotation = joystick_1.getRawAxis(2)*0.55; // WPI Drivetrain uses positive=> right Arcade Drive
+    zRotation = joystick_1.getRawAxis(2)*0.50; // WPI Drivetrain uses positive=> right Arcade Drive
     //zRotation = joystick_1.getRawAxis(2);//Curvature Drive
 
     if (joystick_0.getThrottle() > 0.5) {
@@ -879,11 +851,22 @@ public class Robot extends TimedRobot {
           shooter_speed=Speeds.idle_shooter_speed;
         }
       }
+
+      // Manual Limelight control
+      if (joystick_0.getRawButton(Buttons.limelight_button)) {
+        zRotation=dt.get_raw_speeds(limelight.getAlignmentAdjustment());
+        limelight.setLEDState(3);
+      }
+
+      if (joystick_0.getRawButtonReleased(Buttons.limelight_button)) {
+        zRotation=0;
+        limelight.setLEDState(1);
+      }
     }
     
     if(joystick_0.getRawButton(Buttons.manual_shoot_button)){
       shooter_speed=Speeds.shooter_volt_close;
-      shooter_back_speed=Speeds.shooter_volt_far;
+      shooter_back_speed=Speeds.shooter_back_volt_close;
       manual_shooter=true;
     }
     if(joystick_0.getRawButtonReleased(Buttons.manual_shoot_button)){
@@ -957,199 +940,295 @@ public class Robot extends TimedRobot {
       manual_conveyor = false;
       conveyor_speed = 0;
     }
-    // Manual Limelight control
-    if (joystick_0.getRawButton(Buttons.limelight_button)) {
-      zRotation=dt.get_raw_speeds(limelight.getAlignmentAdjustment());
-      limelight.setLEDState(3);
-    }
-
-    if (joystick_1.getRawButtonReleased(Buttons.limelight_button)) {
-      zRotation=0;
-      limelight.setLEDState(1);
-    }
     // up == true, middle == true, then can go up or down
     // up == false, middle == true, then can go up or down
     // up == true, middle == false, 
 
     //state 0: can only move up
     // state 1
-    switch(left_climber_pos){
-      case 0:
-        left_can_climb_up = true;
-        left_can_climb_down = false;
-        if(hall_left.get()){
-          left_climber_pos = 1;
-        }
-      case 1:
-        left_can_climb_up = true;
-        left_can_climb_down = true;
-        if(!hall_left.get()){
-          if(left_going_up){
-            // left_can_climb_up = false;
-            // left_can_climb_down = true;
-            left_climber_pos = 2;
-          }
-          else{
-            // left_can_climb_up = true;
-            // left_can_climb_down = false;
-            left_climber_pos = 0;
-          }
-        }
-      case 2:
-        left_can_climb_up = false;
-        left_can_climb_down = true;
-        if(hall_left.get()){
-          left_climber_pos = 1;
-        }
-    }
 
-    switch(right_climber_pos){
-      case 0:
-        right_can_climb_up = true;
-        right_can_climb_down = false;
-        if(hall_right.get()){
-          right_climber_pos = 1;
-        }
-      case 1:
-        right_can_climb_up = true;
-        right_can_climb_down = true;
-        if(!hall_right.get()){
-          if(right_going_up){
-            right_climber_pos = 2;
-          }
-          else{
-            right_climber_pos = 0;
-          }
-        }
-      case 2:
-        right_can_climb_up = false;
-        right_can_climb_down = true;
-        if(hall_right.get()){
-          right_climber_pos = 1;
-        }
+    if(joystick_0.getRawButtonPressed(Buttons.climber_override)){
+      override_climber=!override_climber;
     }
-
     // Toggled buttons for climbing
     if (climber_mode) {
-      // Climber Controls
-      // Manually control climber
-      if (joystick_0.getRawButton(Buttons.manual_climber_button)) {
-        if (left_can_climb_up) {
-          left_climber_speed = Speeds.manual_left_climber_speed_up;
-          left_going_up = true;
-        } else {
+      if(!override_climber){
+        switch(left_climber_pos){
+          case 0:
+            left_can_climb_up = true;
+            left_can_climb_down = false;
+            if(hall_left.get()){
+              left_climber_pos = 1;
+            }
+          case 1:
+            left_can_climb_up = true;
+            left_can_climb_down = true;
+            if(!hall_left.get()){
+              if(left_going_up){
+                // left_can_climb_up = false;
+                // left_can_climb_down = true;
+                left_climber_pos = 2;
+              }
+              else{
+                // left_can_climb_up = true;
+                // left_can_climb_down = false;
+                left_climber_pos = 0;
+              }
+            }
+          case 2:
+            left_can_climb_up = false;
+            left_can_climb_down = true;
+            if(hall_left.get()){
+              left_climber_pos = 1;
+            }
+        }
+    
+        switch(right_climber_pos){
+          case 0:
+            right_can_climb_up = true;
+            right_can_climb_down = false;
+            if(hall_right.get()){
+              right_climber_pos = 1;
+            }
+          case 1:
+            right_can_climb_up = true;
+            right_can_climb_down = true;
+            if(!hall_right.get()){
+              if(right_going_up){
+                right_climber_pos = 2;
+              }
+              else{
+                right_climber_pos = 0;
+              }
+            }
+          case 2:
+            right_can_climb_up = false;
+            right_can_climb_down = true;
+            if(hall_right.get()){
+              right_climber_pos = 1;
+            }
+        }
+        // Climber Controls
+        // Manually control climber
+        if (joystick_0.getRawButton(Buttons.manual_climber_button)) {
+          if (left_can_climb_up) {
+            left_climber_speed = Speeds.manual_left_climber_speed_up;
+            left_going_up = true;
+          } else {
+            left_climber_speed = 0;
+          }
+          if (right_can_climb_up) {
+            right_climber_speed = Speeds.manual_right_climber_speed_up;
+            right_going_up = true;
+          } else {
+            right_climber_speed = 0;
+          }
+          state = 0;
+        }
+        
+        // Stop climber when not manually controlled
+        if (joystick_0.getRawButtonReleased(Buttons.manual_climber_button)) {
           left_climber_speed = 0;
-        }
-        if (right_can_climb_up) {
-          right_climber_speed = Speeds.manual_right_climber_speed_up;
-          right_going_up = true;
-        } else {
           right_climber_speed = 0;
+          state = 0;
         }
-        state = 0;
-      }
-      
-      // Stop climber when not manually controlled
-      if (joystick_0.getRawButtonReleased(Buttons.manual_climber_button)) {
-        left_climber_speed = 0;
-        right_climber_speed = 0;
-<<<<<<< HEAD
 
-=======
->>>>>>> Climbers
-        state = 0;
-      }
+        // Manually control climber backwards
+        if (joystick_0.getRawButton(Buttons.manual_rev_climber_button)) {
+          if(left_can_climb_down){
+            left_climber_speed = -Speeds.manual_left_climber_speed_down;
+            left_going_up = false;
+          }else{
+            left_climber_speed = 0;
+          }
+          if(right_can_climb_down){
+            right_climber_speed = -Speeds.manual_right_climber_speed_down;
+            right_going_up = false;
+          }else{
+            right_climber_speed = 0;
+          }
+          state = 0;
+        }
 
-      // Manually control climber backwards
-      if (joystick_0.getRawButton(Buttons.manual_rev_climber_button)) {
-        if(left_can_climb_down){
+        // Stop climber when not manually controlled backwards
+        if (joystick_0.getRawButtonReleased(Buttons.manual_rev_climber_button)) {
+          left_climber_speed = 0;
+          right_climber_speed = 0;
+          state = 0;
+        }
+
+        // Manually control left climber
+        if (joystick_0.getRawButton(Buttons.manual_left_climber_button)) {
+          if (left_can_climb_up) {
+            left_climber_speed = Speeds.manual_left_climber_speed_up;
+            left_going_up = true;
+          } else {
+            left_climber_speed = 0;
+          }
+          state = 1;
+        }
+
+        // Stop left climber when not manually controlled
+        if (joystick_0.getRawButtonReleased(Buttons.manual_left_climber_button)) {
+          left_climber_speed = 0;
+          state = 1;
+        }
+
+        // Manually control left climber backwards
+        if (joystick_0.getRawButton(Buttons.manual_rev_left_climber_button)) {
+          if(left_can_climb_down){
+            left_climber_speed = -Speeds.manual_left_climber_speed_down;
+            left_going_up = false;
+          }else{
+            left_climber_speed=0;
+          }
+          state = 1;
+        }
+
+        // Stop left climber when not manually controlled backwards
+        if (joystick_0.getRawButtonReleased(Buttons.manual_rev_left_climber_button)) {
+          left_climber_speed = 0;
+          state = 1;
+        }
+
+        // Manually control right climber
+        if (joystick_0.getRawButton(Buttons.manual_right_climber_button)) {
+          if (right_can_climb_up) {
+            right_climber_speed = Speeds.manual_right_climber_speed_up;
+            right_going_up = true;
+          } else {
+            right_climber_speed = 0;
+          }
+          state = 2;
+        }
+
+        // Stop right climber when not manually controlled
+        if (joystick_0.getRawButtonReleased(Buttons.manual_right_climber_button)) {
+          right_climber_speed = 0;
+          state = 2;
+        }
+
+        // Manually control right climber backwards
+        if (joystick_0.getRawButton(Buttons.manual_rev_right_climber_button)) {
+          if(right_can_climb_down){
+            right_climber_speed = -Speeds.manual_right_climber_speed_down;
+            right_going_up = false;
+          }else{
+            right_climber_speed=0;
+          }
+          state = 2;
+        }
+
+        // Stop right climber when not manually controlled backwards
+        if (joystick_0.getRawButtonReleased(Buttons.manual_rev_right_climber_button)) {
+          right_climber_speed = 0;
+          state = 2;
+        }
+
+      }else{
+        if (joystick_0.getRawButton(Buttons.manual_climber_button)) {
+          if (left_can_climb) {
+            left_climber_speed = Speeds.manual_left_climber_speed_up;
+          } else {
+            left_climber_speed = 0;
+          }
+          if (right_can_climb) {
+            right_climber_speed = Speeds.manual_right_climber_speed_up;
+          } else {
+            right_climber_speed = 0;
+          }
+          state = 0;
+        }
+  
+        // Stop climber when not manually controlled
+        if (joystick_0.getRawButtonReleased(Buttons.manual_climber_button)) {
+          left_climber_speed = 0;
+          right_climber_speed = 0;
+          state = 0;
+        }
+  
+        // Manually control climber backwards
+        if (joystick_0.getRawButton(Buttons.manual_rev_climber_button)) {
           left_climber_speed = -Speeds.manual_left_climber_speed_down;
-          left_going_up = false;
-        }else{
-          left_climber_speed = 0;
-        }
-        if(right_can_climb_down){
           right_climber_speed = -Speeds.manual_right_climber_speed_down;
-          right_going_up = false;
-        }else{
-          right_climber_speed = 0;
+          left_can_climb = true;
+          right_can_climb = true;
+          state = 0;
         }
-        state = 0;
-      }
-
-      // Stop climber when not manually controlled backwards
-      if (joystick_0.getRawButtonReleased(Buttons.manual_rev_climber_button)) {
-        left_climber_speed = 0;
-        right_climber_speed = 0;
-        state = 0;
-      }
-
-      // Manually control left climber
-      if (joystick_0.getRawButton(Buttons.manual_left_climber_button)) {
-        if (left_can_climb_up) {
-          left_climber_speed = Speeds.manual_left_climber_speed_up;
-          left_going_up = true;
-        } else {
+  
+        // Stop climber when not manually controlled backwards
+        if (joystick_0.getRawButtonReleased(Buttons.manual_rev_climber_button)) {
           left_climber_speed = 0;
+          right_climber_speed = 0;
+          state = 0;
         }
-        state = 1;
-      }
-
-      // Stop left climber when not manually controlled
-      if (joystick_0.getRawButtonReleased(Buttons.manual_left_climber_button)) {
-        left_climber_speed = 0;
-        state = 1;
-      }
-
-      // Manually control left climber backwards
-      if (joystick_0.getRawButton(Buttons.manual_rev_left_climber_button)) {
-        if(left_can_climb_down){
+  
+        // Manually control left climber
+        if (joystick_0.getRawButton(Buttons.manual_left_climber_button)) {
+          if (left_can_climb) {
+            left_climber_speed = Speeds.manual_left_climber_speed_up;
+          } else {
+            left_climber_speed = 0;
+          }
+          state = 1;
+        }
+  
+        // Stop left climber when not manually controlled
+        if (joystick_0.getRawButtonReleased(Buttons.manual_left_climber_button)) {
+          left_climber_speed = 0;
+          state = 1;
+        }
+  
+        // Manually control left climber backwards
+        if (joystick_0.getRawButton(Buttons.manual_rev_left_climber_button)) {
           left_climber_speed = -Speeds.manual_left_climber_speed_down;
-          left_going_up = false;
-        }else{
-          left_climber_speed=0;
+          left_can_climb = true;
+          state = 1;
         }
-        state = 1;
-      }
-
-      // Stop left climber when not manually controlled backwards
-      if (joystick_0.getRawButtonReleased(Buttons.manual_rev_left_climber_button)) {
-        left_climber_speed = 0;
-        state = 1;
-      }
-
-      // Manually control right climber
-      if (joystick_0.getRawButton(Buttons.manual_right_climber_button)) {
-        if (right_can_climb_up) {
-          right_climber_speed = Speeds.manual_right_climber_speed_up;
-          right_going_up = true;
-        } else {
+  
+        // Stop left climber when not manually controlled backwards
+        if (joystick_0.getRawButtonReleased(Buttons.manual_rev_left_climber_button)) {
+          left_climber_speed = 0;
+          state = 1;
+        }
+  
+        // Manually control right climber
+        if (joystick_0.getRawButton(Buttons.manual_right_climber_button)) {
+          if (right_can_climb) {
+            right_climber_speed = Speeds.manual_right_climber_speed_up;
+          } else {
+            right_climber_speed = 0;
+          }
+          state = 2;
+        }
+  
+        // Stop right climber when not manually controlled
+        if (joystick_0.getRawButtonReleased(Buttons.manual_right_climber_button)) {
           right_climber_speed = 0;
+          state = 2;
         }
-        state = 2;
-      }
-
-      // Stop right climber when not manually controlled
-      if (joystick_0.getRawButtonReleased(Buttons.manual_right_climber_button)) {
-        right_climber_speed = 0;
-        state = 2;
-      }
-
-      // Manually control right climber backwards
-      if (joystick_0.getRawButton(Buttons.manual_rev_right_climber_button)) {
-        if(right_can_climb_down){
+  
+        // Manually control right climber backwards
+        if (joystick_0.getRawButton(Buttons.manual_rev_right_climber_button)) {
           right_climber_speed = -Speeds.manual_right_climber_speed_down;
-          right_going_up = false;
-        }else{
-          right_climber_speed=0;
+          right_can_climb = true;
+          state = 2;
         }
-        state = 2;
-      }
-
-      // Stop right climber when not manually controlled backwards
-      if (joystick_0.getRawButtonReleased(Buttons.manual_rev_right_climber_button)) {
-        right_climber_speed = 0;
-        state = 2;
+  
+        // Stop right climber when not manually controlled backwards
+        if (joystick_0.getRawButtonReleased(Buttons.manual_rev_right_climber_button)) {
+          right_climber_speed = 0;
+          state = 2;
+        }
+  
+        // Hall effects for climbers
+        if (!hall_left.get()) {// Switched so if it is true and "getting" then there is nothing there
+          left_can_climb = false;
+        }
+  
+        if (!hall_right.get()) {
+          right_can_climb = false;
+        }
       }
     }
     
@@ -1162,7 +1241,7 @@ public class Robot extends TimedRobot {
     intake.set_speed(intake_speed);
     // System.out.println("Shooter: "+shooter.get_velocity());
     // System.out.println("Back: "+shooter_back.get_velocity());
-
+    //System.out.println(left_climber_speed);
     if (state == 0) {
       climber.set_speeds(left_climber_speed, right_climber_speed);
     } else if (state == 1) {
@@ -1170,16 +1249,18 @@ public class Robot extends TimedRobot {
     } else if (state == 2) {
       climber.set_speeds(0, right_climber_speed);
     }
+    System.out.println("Override: "+override_climber);
+    /*
     String state_name = "";
-    if(state == 0){
+    if(left_climber_pos == 0){
       state_name = "bottom";
     }
-    else if(state == 1){
+    else if(left_climber_pos == 1){
       state_name = "middle";
     }
     else{
       state_name = "top";
     }
-    System.out.println("state: " + state_name);
+    System.out.println("state: " + state_name);*/
   }
 }
