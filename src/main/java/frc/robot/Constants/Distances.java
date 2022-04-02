@@ -19,7 +19,7 @@ public class Distances {
     public static double max_vel = 7;
     public static double max_acc = 5; //CHANGE THIS
     
-    public static double wall_to_ball = 54;//Distance from wall to ball in straight line
+    public static double wall_to_ball = 64;//Distance from wall to ball in straight line
 
     public static double default_drive = 80;
     public static double tarmac_to_ball = 43;
