@@ -141,6 +141,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("Auto Choices:", chooser);
     NetworkTableInstance inst = NetworkTableInstance.getDefault();
     NetworkTable dashboard_info = inst.getTable("Live_Dashboard");
+    autoSelected=chooser.getSelected();
     robotX = dashboard_info.getEntry("robotX");
     robotY = dashboard_info.getEntry("robotY");
     robotHeading = dashboard_info.getEntry("robotHeading");
@@ -148,7 +149,35 @@ public class Robot extends TimedRobot {
     pathX = dashboard_info.getEntry("pathX");
     pathY = dashboard_info.getEntry("pathY");
     isFollowingPath = dashboard_info.getEntry("isFollowingTrajectory");
+
+        //loading PathWeaver json files from deploy directory
+        Path ThreeBallPath = Filesystem.getDeployDirectory().toPath();
+        try {
+          ThreeBallPath = Filesystem.getDeployDirectory().toPath().resolve("paths/output/3ball.wpilib.json");
+          System.out.println("                              " + Filesystem.getDeployDirectory().getName());
+          threeBall = TrajectoryUtil.fromPathweaverJson(ThreeBallPath);
+        } catch (IOException ex) {
+          DriverStation.reportError("Unable to open trajectory: " + ThreeBallPath, ex.getStackTrace());
+        }
     
+        Path trajectoryPath = Filesystem.getDeployDirectory().toPath();
+        try {
+         trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve("paths/output/Unnamed.wpilib.json");
+         System.out.println("                              " + Filesystem.getDeployDirectory().getName());
+         trajTest = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
+      } catch (IOException ex) {
+          DriverStation.reportError("Unable to open trajectory: " + trajectoryPath, ex.getStackTrace());
+        }
+        switch(autoSelected){
+          case TrajectoryAuto:
+            dt.odom.resetPosition(new Pose2d(new Translation2d(Units.metersToFeet(trajTest.getInitialPose().getX()), Units.metersToFeet(trajTest.getInitialPose().getY())), trajTest.getInitialPose().getRotation()), trajTest.getInitialPose().getRotation());
+            break;
+          case ThreeBallAuto:
+            dt.odom.resetPosition(new Pose2d(new Translation2d(Units.metersToFeet(threeBall.getInitialPose().getX()), Units.metersToFeet(threeBall.getInitialPose().getY())), threeBall.getInitialPose().getRotation()), threeBall.getInitialPose().getRotation());
+            break;
+        }
+      
+    System.out.println(threeBall);
     //CameraServer.startAutomaticCapture();
     //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature    
@@ -174,39 +203,14 @@ public class Robot extends TimedRobot {
     stop_time=0;
     navx.reset();
     dt.navx.reset();
-    //loading PathWeaver json files from deploy directory
-    Path ThreeBallPath = Filesystem.getDeployDirectory().toPath();
-    try {
-      ThreeBallPath = Filesystem.getDeployDirectory().toPath().resolve("paths/output/3ball.wpilib.json");
-      System.out.println("                              " + Filesystem.getDeployDirectory().getName());
-      threeBall = TrajectoryUtil.fromPathweaverJson(ThreeBallPath);
-    } catch (IOException ex) {
-      DriverStation.reportError("Unable to open trajectory: " + ThreeBallPath, ex.getStackTrace());
-    }
 
-    Path trajectoryPath = Filesystem.getDeployDirectory().toPath();
-    try {
-     trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve("paths/output/Unnamed.wpilib.json");
-     System.out.println("                              " + Filesystem.getDeployDirectory().getName());
-     trajTest = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
-  } catch (IOException ex) {
-      DriverStation.reportError("Unable to open trajectory: " + trajectoryPath, ex.getStackTrace());
-    }
-    switch(autoSelected){
-      case TrajectoryAuto:
-        dt.odom.resetPosition(new Pose2d(new Translation2d(Units.metersToFeet(trajTest.getInitialPose().getX()), Units.metersToFeet(trajTest.getInitialPose().getY())), trajTest.getInitialPose().getRotation()), trajTest.getInitialPose().getRotation());
-        break;
-      case ThreeBallAuto:
-        dt.odom.resetPosition(new Pose2d(new Translation2d(Units.metersToFeet(threeBall.getInitialPose().getX()), Units.metersToFeet(threeBall.getInitialPose().getY())), threeBall.getInitialPose().getRotation()), threeBall.getInitialPose().getRotation());
-        break;
-    }
 
   }
 
   @Override
   public void autonomousPeriodic(){
 
-    pose = dt.odom.update(dt.getHeading(), dt.convertMeters(dt.front_left.getSelectedSensorPosition()-starting_pos), dt.convertMeters(dt.front_right.getSelectedSensorPosition()-starting_pos));
+    pose = dt.odom.update(dt.getHeading(), dt.convertMeters2(dt.front_left.getSelectedSensorPosition()-starting_pos), dt.convertMeters2(dt.front_right.getSelectedSensorPosition()-starting_pos));
     Trajectory.State goal = new Trajectory.State();
 
     //If ball detected make conveyor move to pull it
@@ -807,7 +811,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    pose = dt.odom.update(dt.getHeading(), dt.convertMeters(dt.front_left.getSelectedSensorPosition()-starting_pos), dt.convertMeters(dt.front_right.getSelectedSensorPosition()-starting_pos));
+    pose = dt.odom.update(dt.getHeading(), dt.convertMeters2(dt.front_left.getSelectedSensorPosition()-starting_pos), dt.convertMeters2(dt.front_right.getSelectedSensorPosition()-starting_pos));
     robotX.setDouble(Units.metersToFeet(pose.getX()));
     robotY.setDouble(Units.metersToFeet(pose.getY()));
     robotHeading.setDouble(pose.getRotation().getRadians());
@@ -1183,7 +1187,7 @@ public class Robot extends TimedRobot {
     }else if(state==2){
       climber.set_speeds(0, right_climber_speed);
     }
-    
-    stats(pose, teleop_speeds, dt, starting_pos, start_right_pos);
+    stats(pose, dt.kin.toWheelSpeeds(new ChassisSpeeds(3, 0, 0)), dt, starting_pos, start_right_pos);
+    // stats(pose, teleop_speeds, dt, starting_pos, start_right_pos);
   }
 }
