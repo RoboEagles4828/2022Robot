@@ -70,8 +70,8 @@ public class Robot extends TimedRobot {
   boolean right_can_climb_up = true;// Hall effects allow to climb up on right
   boolean left_can_climb_down = true;
   boolean right_can_climb_down=true;
-  boolean left_going_up = true; //is it going up
-  boolean right_going_up = true;
+  boolean left_going_up = false; //is it going up
+  boolean right_going_up = false;
   int state = 0;// 0 is both, 1 is left, 2 is right
   int left_climber_pos = 0; // 0 is bottom, 1 is middle, 2 is top
   int right_climber_pos = 0;
@@ -745,8 +745,8 @@ public class Robot extends TimedRobot {
     timer.reset();
     timer.start();
     first = true;
-    left_going_up = true;
-    right_going_up = true;
+    left_going_up = false;
+    right_going_up = false;
     /* factory default values */
     /*
      * _talonL.configFactoryDefault();
@@ -971,7 +971,12 @@ public class Robot extends TimedRobot {
     // up == false, middle == true, then can go up or down
     // up == true, middle == false, 
 
-    //state 0: can only move up
+
+
+    // Toggled buttons for climbing
+    if (climber_mode) {
+
+          //state 0: can only move up
     // state 1
     switch(left_climber_pos){
       case 0:
@@ -980,6 +985,7 @@ public class Robot extends TimedRobot {
         if(hall_left.get()){
           left_climber_pos = 1;
         }
+        break;
       case 1:
         left_can_climb_up = true;
         left_can_climb_down = true;
@@ -995,12 +1001,14 @@ public class Robot extends TimedRobot {
             left_climber_pos = 0;
           }
         }
+        break;
       case 2:
         left_can_climb_up = false;
         left_can_climb_down = true;
         if(hall_left.get()){
           left_climber_pos = 1;
         }
+        break;
     }
 
     switch(right_climber_pos){
@@ -1010,6 +1018,7 @@ public class Robot extends TimedRobot {
         if(hall_right.get()){
           right_climber_pos = 1;
         }
+        break;
       case 1:
         right_can_climb_up = true;
         right_can_climb_down = true;
@@ -1021,16 +1030,16 @@ public class Robot extends TimedRobot {
             right_climber_pos = 0;
           }
         }
+        break;
       case 2:
         right_can_climb_up = false;
         right_can_climb_down = true;
         if(hall_right.get()){
           right_climber_pos = 1;
         }
+        break;
     }
 
-    // Toggled buttons for climbing
-    if (climber_mode) {
       // Climber Controls
       // Manually control climber
       if (joystick_0.getRawButton(Buttons.manual_climber_button)) {
@@ -1048,7 +1057,7 @@ public class Robot extends TimedRobot {
         }
         state = 0;
       }
-
+      
       // Stop climber when not manually controlled
       if (joystick_0.getRawButtonReleased(Buttons.manual_climber_button)) {
         left_climber_speed = 0;
@@ -1167,15 +1176,16 @@ public class Robot extends TimedRobot {
       climber.set_speeds(0, right_climber_speed);
     }
     String state_name = "";
-    if(state == 0){
+    if(left_climber_pos == 0){
       state_name = "bottom";
     }
-    else if(state == 1){
+    else if(left_climber_pos == 1){
       state_name = "middle";
     }
     else{
       state_name = "top";
     }
-    System.out.println("state: " + state_name);
+    System.out.println("\nstate: " + state_name + "\n");
+    System.out.println("HI TOMMY SPEED IS " + left_climber_speed);
   }
 }
