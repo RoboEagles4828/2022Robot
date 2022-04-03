@@ -493,7 +493,7 @@ public class Robot extends TimedRobot {
       case ThreeBall:
         switch(auto_state){
           case 0://Shoot
-            if(timer.get()<Times.wall_shoot_time-1){
+            if(timer.get()<Times.wall_shoot_time){
               shooter_speed=Speeds.shooter_volt_close;
               shooter_back_speed=Speeds.shooter_back_volt_close;
               manual_shooter=true;
@@ -781,7 +781,7 @@ public class Robot extends TimedRobot {
         shooter_speed=Speeds.idle_shooter_speed;
       }else{
         shooter_speed=0;
-    }
+      }
       //Manually control shooter
       //Shoot Far
       if(joystick_0.getRawButton(Buttons.shoot_button_far)){
