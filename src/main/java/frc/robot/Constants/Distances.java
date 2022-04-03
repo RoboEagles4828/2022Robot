@@ -21,6 +21,7 @@ public class Distances {
     
     public static double wall_to_ball = 60;//Distance from wall to ball in straight line
 
+    // 4/2 Values
     public static double default_drive = 80;
     public static double tarmac_to_ball = 43;
     public static double ball_to_line = 25;
