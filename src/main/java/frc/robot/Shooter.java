@@ -69,7 +69,7 @@ public class Shooter {
             //0.04 is so that the bigger wheel is less sensitive because it is the limiting factor for when to shoot
         }
         //System.out.println(-Speeds.vel_threshold*(3058.85*get_voltage()-2225.71));
-        return Speeds.vel_threshold*(3058.85*get_voltage()-2225.71);//tested equation for back shooter
+        return (Speeds.vel_threshold-0.01)*(3058.85*get_voltage()-2225.71);//tested equation for back shooter
     }
     public void stop(){
         shooter.set(0);
