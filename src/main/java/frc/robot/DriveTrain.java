@@ -47,8 +47,8 @@ public class DriveTrain {
         double rightV = feedforward.calculate(rightSpeed);
         // left.setVoltage(leftV);
         // right.setVoltage(rightV);
-        leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-leftStart, leftSpeed)+ leftV;
-        rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-rightStart, rightSpeed)+ rightV;
+        // leftV = leftPIDController.calculate(front_left.getSelectedSensorPosition()-leftStart, leftSpeed)+ leftV;
+        // rightV = rightPIDController.calculate(front_right.getSelectedSensorPosition()-rightStart, rightSpeed)+ rightV;
         System.out.println("setvoltage function - left combined voltage: " + leftV + ", right combined voltage: " + rightV + "\n");
 
         set_speeds(1, 0);

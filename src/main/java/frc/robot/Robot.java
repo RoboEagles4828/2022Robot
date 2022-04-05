@@ -314,25 +314,28 @@ public class Robot extends TimedRobot {
       case ThreeBallAuto:
           switch(auto_state){
             case 0:
-              if(timer.get()<Times.wall_shoot_time){
-                shooter_speed=Speeds.wall_shooter_speed;
-                manual_shooter=true;
-                if(timer.get()>Times.conveyor_first_delay){
-                  conveyor_speed=Speeds.conveyor_shoot_speed;
-                  manual_conveyor=true;
-                }
-              }else{
-                conveyor_speed=0;
-                manual_conveyor=false;
-                auto_state++;
+            if (timer.get() < Times.wall_shoot_time) {
+              shooter_speed = Speeds.shooter_volt_close;
+              shooter_back_speed = Speeds.shooter_back_volt_close;
+              manual_shooter = true;
+              if (timer.get() > Times.conveyor_first_delay) {
+                conveyor_speed = Speeds.conveyor_shoot_speed;
+                manual_conveyor = true;
               }
-              break;
+            } else {
+              conveyor_speed = 0;
+              shooter_back_speed=0;
+              manual_conveyor = false;
+              manual_shooter = false;
+              auto_state++;
+            }
+            break;
             case 1:
               intake_speed = Speeds.auto_intake_speed;
               goal = threeBall.sample(timer.get()-Times.wall_shoot_time);
-              // if(timer.get()-Times.wall_shoot_time > 0.01){
-              //   pose = threeBall.sample(timer.get()-Times.wall_shoot_time-0.01).poseMeters;
-              // }
+              if(timer.get()-Times.wall_shoot_time < 0.01){
+                pose = threeBall.sample(timer.get()-Times.wall_shoot_time-0.01).poseMeters;
+              }
               System.out.println(timer.get()-Times.wall_shoot_time);
               auto_chassis_speeds = controller.calculate(pose, goal);
               System.out.println(auto_chassis_speeds);
@@ -353,6 +356,8 @@ public class Robot extends TimedRobot {
               break;
             case 2:
               if(timer.get()-Times.wall_shoot_time-threeBall.getTotalTimeSeconds() < Times.wall_shoot_time){
+                shooter_speed = Speeds.shooter_volt_close;
+                shooter_back_speed = Speeds.shooter_back_volt_close;
                 if(first){
                   conveyor_speed=Speeds.conveyor_shoot_speed;
                   manual_conveyor=true;
@@ -373,9 +378,9 @@ public class Robot extends TimedRobot {
                   first=false;
                 }
                 manual_shooter = true;
-                break;
+              }
+              break;
           }
-        }
         break;
 
         case TarmacToBallAuto:
@@ -883,7 +888,7 @@ public class Robot extends TimedRobot {
     }*/
 
     if(joystick_0.getRawButton(Buttons.manual_shoot_button)){
-      shooter_speed=Speeds.shooter_volt;
+      shooter_speed=Speeds.shooter_volt_close;
       manual_shooter=true;
     }
     /*shooter.shooter.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
@@ -894,7 +899,7 @@ public class Robot extends TimedRobot {
     System.out.println("Int: "+shooter.shooter.getSelectedSensorVelocity());*/  
 
     if(joystick_1.getRawButton(Buttons.manual_shoot_button)){
-      shooter_back_speed=Speeds.shooter_back_volt;
+      shooter_back_speed=Speeds.shooter_back_volt_close;
       manual_shooter=true;
     }
 
@@ -1187,7 +1192,7 @@ public class Robot extends TimedRobot {
     }else if(state==2){
       climber.set_speeds(0, right_climber_speed);
     }
-    stats(pose, dt.kin.toWheelSpeeds(new ChassisSpeeds(3, 0, 0)), dt, starting_pos, start_right_pos);
+    stats(pose, teleop_speeds, dt, starting_pos, start_right_pos);
     // stats(pose, teleop_speeds, dt, starting_pos, start_right_pos);
   }
 }
