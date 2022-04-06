@@ -8,11 +8,11 @@ public class Distances {
     public static double wheel_size = 3;
     public static double track_width = 21.5;
 
-    public static double kS = 0.268;
-    public static double kV = 1.89;
-    public static double kA = 0.243;
+    public static double kS = 0.4596;
+    public static double kV = 2.4595;
+    public static double kA = 0.64258;
 
-    public static double kp = 1;
+    public static double kp = 3.6067;
     public static double ki = 0;
     public static double kd = 0;
 
