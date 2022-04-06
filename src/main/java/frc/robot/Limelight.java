@@ -16,12 +16,15 @@ public class Limelight {
     //distance stuff
     private double mountAngle;
 
+    public double firstAngle;
+
     public Limelight() {
         table = NetworkTableInstance.getDefault().getTable("limelight-roboeag");
         tx = table.getEntry("tx");
         ty = table.getEntry("ty");
         ta = table.getEntry("ta");
         tv = table.getEntry("tv");
+        firstAngle = 0;
     }
 
     public Limelight(double mountAngle) {
@@ -31,6 +34,7 @@ public class Limelight {
         ta = table.getEntry("ta");
         tv = table.getEntry("tv");
         this.mountAngle = mountAngle;
+        firstAngle = 0;
     }
 
     public double getX() {
@@ -66,16 +70,17 @@ public class Limelight {
 
     //-right +left
     public double getAlignmentAdjustment() {
-        double min = 0.05; //tune
+        double min = 0.1; //tune
         double adjustment = 0;
         double kP = 0.1; //tune
         double tx_angle = tx.getDouble(0);
         double headingErr = -tx_angle;
         if (hasValidTarget()) {
-            if (tx_angle > 1) {
+            if (firstAngle == 0) firstAngle = tx_angle;
+            if (tx_angle > firstAngle) {
                 adjustment = kP * headingErr - min;
             }
-            else if (tx_angle < 1) {
+            else if (tx_angle < firstAngle) {
                 adjustment = kP * headingErr + min;
             }
         }
