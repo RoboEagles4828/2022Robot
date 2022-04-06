@@ -17,7 +17,7 @@ public class Limelight {
     private double mountAngle;
 
     public Limelight() {
-        table = NetworkTableInstance.getDefault().getTable("limelight");
+        table = NetworkTableInstance.getDefault().getTable("limelight-roboeag");
         tx = table.getEntry("tx");
         ty = table.getEntry("ty");
         ta = table.getEntry("ta");
@@ -25,7 +25,7 @@ public class Limelight {
     }
 
     public Limelight(double mountAngle) {
-        table = NetworkTableInstance.getDefault().getTable("limelight");
+        table = NetworkTableInstance.getDefault().getTable("limelight-roboeag");
         tx = table.getEntry("tx");
         ty = table.getEntry("ty");
         ta = table.getEntry("ta");

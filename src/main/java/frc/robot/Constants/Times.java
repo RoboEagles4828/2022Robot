@@ -7,4 +7,5 @@ public class Times {
     public static double conveyor_delay = 1.5;
     public static double conveyor_first_delay = 2.5;
     public static double intake_ball_time = 0.5;
+    public static double intake_drop_time = 2;
 }

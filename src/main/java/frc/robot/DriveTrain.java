@@ -6,8 +6,8 @@ import edu.wpi.first.wpilibj.motorcontrol.*;
 import frc.robot.Constants.*;
 
 public class DriveTrain {
-    private MotorControllerGroup left;
-    private MotorControllerGroup right;
+    public MotorControllerGroup left;
+    public MotorControllerGroup right;
     private DifferentialDrive dt;
     public WPI_TalonFX front_left = new WPI_TalonFX(Ports.front_left_port);
     public WPI_TalonFX back_left = new WPI_TalonFX(Ports.back_left_port);
@@ -17,7 +17,7 @@ public class DriveTrain {
         left = new MotorControllerGroup(front_left, back_left);
         right = new MotorControllerGroup(front_right, back_right);
         dt = new DifferentialDrive(left, right);
-
+        
         left.setInverted(false);
         right.setInverted(true);
     }
@@ -25,6 +25,7 @@ public class DriveTrain {
     public void set_speeds(double xSpeed, double zRotation){
         dt.arcadeDrive(xSpeed, zRotation);
     }
+    
 
     public void stop(){
         dt.arcadeDrive(0, 0);
