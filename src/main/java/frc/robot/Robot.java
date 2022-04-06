@@ -178,6 +178,7 @@ public class Robot extends TimedRobot {
     zRotation=0;
     stop_time=0;
     navx.reset();
+    dt.coast();
   }
   @Override
   public void autonomousPeriodic(){
@@ -609,6 +610,7 @@ public class Robot extends TimedRobot {
     first = true;
     left_going_up = true;
     right_going_up = true;
+    dt.coast();
     /* factory default values */
     /*
      * _talonL.configFactoryDefault();

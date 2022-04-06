@@ -25,12 +25,22 @@ public class DriveTrain {
         dt = new DifferentialDrive(left, right);
         front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
         front_right.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
+        left.setInverted(false);
+        right.setInverted(true);
+    }
+
+    public void brake(){
         front_left.setNeutralMode(NeutralMode.Brake);
         front_right.setNeutralMode(NeutralMode.Brake);
         back_left.setNeutralMode(NeutralMode.Brake);
         back_right.setNeutralMode(NeutralMode.Brake);
-        left.setInverted(false);
-        right.setInverted(true);
+    }
+
+    public void coast(){
+        front_left.setNeutralMode(NeutralMode.Coast);
+        front_right.setNeutralMode(NeutralMode.Coast);
+        back_left.setNeutralMode(NeutralMode.Coast);
+        back_right.setNeutralMode(NeutralMode.Coast);
     }
 
     public void set_speeds(double xSpeed, double zRotation){
