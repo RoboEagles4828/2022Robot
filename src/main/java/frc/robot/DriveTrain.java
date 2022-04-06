@@ -1,6 +1,7 @@
 package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
+import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.kauailabs.navx.frc.AHRS;
 
@@ -31,10 +32,12 @@ public class DriveTrain {
         dt = new DifferentialDrive(left, right);
         front_left.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
         front_right.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
+        front_left.setNeutralMode(NeutralMode.Brake);
+        front_right.setNeutralMode(NeutralMode.Brake);
+        back_left.setNeutralMode(NeutralMode.Brake);
+        back_right.setNeutralMode(NeutralMode.Brake);
         left.setInverted(false);
         right.setInverted(true);
-
-        
     }
 
     public void set_speeds(double xSpeed, double zRotation){
