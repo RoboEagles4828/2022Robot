@@ -68,13 +68,14 @@ public class Limelight {
     public double getAlignmentAdjustment() {
         double min = 0.05; //tune
         double adjustment = 0;
-        double kP = 0.01; //tune
-        double headingErr = tx.getDouble(0);
+        double kP = 0.1; //tune
+        double tx_angle = tx.getDouble(0);
+        double headingErr = -tx_angle;
         if (hasValidTarget()) {
-            if (tx.getDouble(0) > 1) {
+            if (tx_angle > 1) {
                 adjustment = kP * headingErr - min;
             }
-            else if (tx.getDouble(0) < 1) {
+            else if (tx_angle < 1) {
                 adjustment = kP * headingErr + min;
             }
         }
