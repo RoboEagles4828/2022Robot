@@ -40,4 +40,7 @@ public class Distances {
     public static double spacing = 26;
 
     public static double turning_error = 15;//15 for 0.4, 5 for 0.3
+
+    public static double mid_climb = 0;//60.25inch
+    public static double low_climb = 0;//48.75inch
 }

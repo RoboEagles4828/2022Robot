@@ -4,20 +4,11 @@
 
 package frc.robot;
 
-import java.io.IOException;
-import java.nio.file.Path;
 
 import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.cameraserver.CameraServer;
-import edu.wpi.first.cscore.UsbCamera;
-import edu.wpi.first.math.controller.RamseteController;
-import edu.wpi.first.math.geometry.Pose2d;
 
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
-import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.math.trajectory.TrajectoryUtil;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -111,11 +102,9 @@ public class Robot extends TimedRobot {
   int auto_state = 0;
   double auto_start_time = 0;// Only used for auto shooting
   double start_time = 0;// starting time for auto and recycled for auto shoot time
-  boolean first = true;
 
   double stop_time = 0;// stop drive time
   double conveyor_index_time = 0;
-  boolean is_spacing = false;
 
   boolean testing = true;
   double test_temp = 0;
@@ -150,15 +139,8 @@ public class Robot extends TimedRobot {
     backVelNT=Shuffleboard.getTab("Shooter").add("Back Shooter Velocity", 0).getEntry();
     frontReadyNT=Shuffleboard.getTab("Shooter").add("Front Ready", false).getEntry();
     backReadyNT=Shuffleboard.getTab("Shooter").add("Back Ready", false).getEntry();
-    // SmartDashboard.putBoolean("Shooter/Front Ready", shooter.is_ready(Speeds.raw_shooter_vel_close));
-    // SmartDashboard.putBoolean("Shooter/Back Ready", shooter_back.is_ready(Speeds.raw_shooter_back_vel));
-    // SmartDashboard.putNumber("Shooter/Front Shooter Velocity", shooter.get_velocity());
-    // SmartDashboard.putNumber("Shooter/Back Shooter Velocity", shooter_back.get_velocity());
-    //Shuffleboard.getTab("Shooter").add("Large Shooter2", 1).withWidget(BuiltInWidgets.kNumberSlider).getEntry();
     CameraServer.startAutomaticCapture();
     //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
-    //dt.front_left.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);//Defaults to integrated sensor, this is quadrature    
-    //navx.calibrate();
     limelight.setLEDState(3);
   }
 
@@ -329,7 +311,8 @@ public class Robot extends TimedRobot {
                 shooter_speed = Speeds.shooter_volt_close;
                 shooter_back_speed = Speeds.shooter_back_volt_close;;
                 manual_shooter = true;
-                if (timer.get() > Times.conveyor_first_delay) {
+                if (shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+                shooter_back.is_ready()){
                   conveyor_speed = Speeds.conveyor_shoot_speed;
                   manual_conveyor = true;
                 }
@@ -496,7 +479,8 @@ public class Robot extends TimedRobot {
               shooter_back_speed=Speeds.shooter_back_volt_close;
               manual_shooter=true;
               xSpeed=0;
-              if(timer.get()>Times.conveyor_first_delay){
+              if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+              shooter_back.is_ready()){
                 conveyor_speed=Speeds.conveyor_shoot_speed;
                 manual_conveyor=true;
               }
@@ -551,7 +535,8 @@ public class Robot extends TimedRobot {
           shooter_speed=Speeds.shooter_volt_close;
           shooter_back_speed=Speeds.shooter_back_volt_close;
           manual_shooter=true;
-          if(timer.get()>Times.conveyor_first_delay){
+          if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+          shooter_back.is_ready()){
             conveyor_speed=Speeds.conveyor_shoot_speed;
             manual_conveyor=true;
           }
@@ -570,7 +555,8 @@ public class Robot extends TimedRobot {
                 shooter_speed=Speeds.shooter_volt_close;
                 shooter_back_speed=Speeds.shooter_back_volt_close;
                 manual_shooter=true;
-                if(timer.get()>Times.conveyor_first_delay){
+                if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+                shooter_back.is_ready()){
                   conveyor_speed=Speeds.conveyor_shoot_speed;
                   manual_conveyor=true;
                 }
@@ -581,9 +567,25 @@ public class Robot extends TimedRobot {
                 manual_conveyor=false;
                 manual_shooter=false;
                 auto_state++;
-              manual_shooter = true;
-            }
-            break;
+              }
+              break;
+            case 1:
+              if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.default_drive*Distances.encoder_ratio){
+                xSpeed=Speeds.auto_drive_speed;
+              }else{
+                auto_state++;
+                stop_time=timer.get();
+                xSpeed=0;
+              }
+              break;
+            case 2:
+              if(timer.get()-stop_time<Times.stop_dt_time){
+                xSpeed=-Speeds.auto_drive_speed;
+              }else{
+                xSpeed=0;
+                auto_state++;
+              }
+              break;
         }
         break;
     }
@@ -608,38 +610,21 @@ public class Robot extends TimedRobot {
     conveyor_speed=0;
     left_climber_pos = 0;
     right_climber_pos = 0;
+    idle=false;
     timer.reset();
     timer.start();
-    first = true;
     left_going_up = true;
     right_going_up = true;
     dt.coast();
-    /* factory default values */
-    /*
-     * _talonL.configFactoryDefault();
-     * _talonR.configFactoryDefault();
-     */
-
-    /* flip values so robot moves forward when stick-forward/LEDs-green */
-    /*
-     * _talonL.setInverted(false); // <<<<<< Adjust this
-     * _talonR.setInverted(false); // <<<<<< Adjust this
-     */
-    /*
-     * WPI drivetrain classes defaultly assume left and right are opposite. call
-     * this so we can apply + to both sides when moving forward. DO NOT CHANGE
-     */
+    climber.reset_pos();
+    manual_shooter=false;
+    manual_conveyor=false;
   }
 
   @Override
   public void teleopPeriodic() {
-    // SmartDashboard.putNumber("Shooter/Front Shooter Velocity", shooter.get_velocity());
-    // SmartDashboard.putNumber("Shooter/Back Shooter Velocity", shooter_back.get_velocity());
-    // frontVelNT.setDouble(shooter.get_velocity());
-    // backVelNT.setDouble(shooter_back.get_velocity());
     frontVoltNT.setDouble(shooter.shooter.getMotorOutputVoltage());
     // backVoltNT.setDouble(shooter_back.shooter.getMotorOutputVoltage());
-    //shooter_speed=Speeds.shooter_volt_close;
     xSpeed = joystick_1.getRawAxis(1) * -1; // make forward stick positive
     zRotation = joystick_1.getRawAxis(2)*0.55; // WPI Drivetrain uses positive=> right Arcade Drive
     //zRotation = joystick_1.getRawAxis(2);//Curvature Drive
@@ -664,10 +649,6 @@ public class Robot extends TimedRobot {
       conveyor_speed = 0;
     }
 
-    /*if(Math.abs(dt.front_left.getSelectedSensorPosition()-starting_pos)<Distances.encoder_ratio*Distances.spacing&&is_spacing){
-      xSpeed=Speeds.spacing_speed;
-    }*/
-
     if(!climber_mode){
       if(idle){
         shooter_speed=Speeds.idle_shooter_speed;
@@ -679,10 +660,6 @@ public class Robot extends TimedRobot {
       if(joystick_0.getRawButton(Buttons.shoot_button_far)){
         shooter_speed=Speeds.shooter_volt_far;
         shooter_back_speed=Speeds.shooter_back_volt_far;
-        // shooter_speed=frontSpeedNT.getDouble(0);
-        // shooter_back_speed=backSpeedNT.getDouble(0);
-        // frontReadyNT.setBoolean(shooter.is_ready(shooter.get_vel_threshold(true)));
-        // backReadyNT.setBoolean(shooter_back.is_ready(shooter_back.get_vel_threshold(false)));
         frontReadyNT.setBoolean(shooter.is_ready(shooter.get_vel_threshold(true)));
         backReadyNT.setBoolean(shooter_back.is_ready(shooter_back.get_vel_threshold(false)));
         if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
@@ -721,11 +698,6 @@ public class Robot extends TimedRobot {
         shooter_speed = 0;
         shooter_back_speed=0;
         conveyor_speed = 0;
-        start_time = 0;
-        detected = false;
-        stop_time = 0;
-        first = true;
-        is_spacing = false;
       }
 
       //Stop shooter when not manually controlled
@@ -737,11 +709,6 @@ public class Robot extends TimedRobot {
         shooter_speed=0;
         shooter_back_speed=0;
         conveyor_speed=0;
-        start_time=0;
-        detected=false;
-        stop_time=0;
-        first=true;
-        is_spacing=false;
       }
       
       if(joystick_0.getRawButtonPressed(Buttons.idle_shoot_button)){
@@ -778,16 +745,6 @@ public class Robot extends TimedRobot {
         intake_servo.set(0);
       } else {
         intake_servo.set(1);
-      }
-    }
-
-    if (joystick_1.getRawButtonPressed(Buttons.shooter_servo_button)) {
-      if (shooter_servo_0.getPosition() > 0) {
-        shooter_servo_0.setSpeed(-1);
-        shooter_servo_1.setSpeed(-1);
-      } else {
-        shooter_servo_0.setSpeed(1);
-        shooter_servo_1.setSpeed(1);
       }
     }
 
@@ -1130,14 +1087,11 @@ public class Robot extends TimedRobot {
     
     // Executes all speeds
     dt.set_speeds(xSpeed, zRotation);
-    //dt.set_auto_speeds(xSpeed, zRotation);//Curvature
     shooter.set_voltage(shooter_speed);
     shooter_back.set_voltage(shooter_back_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
-    // System.out.println("Shooter: "+shooter.get_velocity());
-    // System.out.println("Back: "+shooter_back.get_velocity());
-    //System.out.println(left_climber_speed);
+
     if (state == 0) {
       climber.set_speeds(left_climber_speed, right_climber_speed);
     } else if (state == 1) {
@@ -1145,7 +1099,8 @@ public class Robot extends TimedRobot {
     } else if (state == 2) {
       climber.set_speeds(0, right_climber_speed);
     }
-    System.out.println("Override: "+override_climber);
+    System.out.println("Left Pos: "+climber.get_left_pos());
+    System.out.println("Right Pos:"+ climber.get_right_pos());
     /*
     String state_name = "";
     if(left_climber_pos == 0){
@@ -1158,5 +1113,53 @@ public class Robot extends TimedRobot {
       state_name = "top";
     }
     System.out.println("state: " + state_name);*/
+  }
+
+  @Override
+  public void testInit(){
+    limelight.setLEDState(1);
+    start_time = 0;
+    stop_time=0;
+    intake_speed=0;
+    shooter_speed=0;
+    shooter_back_speed=0;
+    conveyor_speed=0;
+    left_climber_pos = 0;
+    right_climber_pos = 0;
+    idle=false;
+    timer.reset();
+    timer.start();
+    left_going_up = true;
+    right_going_up = true;
+    dt.coast();
+    climber.reset_pos();
+    manual_shooter=false;
+    manual_conveyor=false;
+  }
+
+  @Override
+  public void testPeriodic(){
+    // SmartDashboard.putNumber("Shooter/Front Shooter Velocity", shooter.get_velocity());
+    // SmartDashboard.putNumber("Shooter/Back Shooter Velocity", shooter_back.get_velocity());
+    frontVelNT.setDouble(shooter.get_velocity());
+    backVelNT.setDouble(shooter_back.get_velocity());
+    frontVoltNT.setDouble(shooter.shooter.getMotorOutputVoltage());
+    backVoltNT.setDouble(shooter_back.shooter.getMotorOutputVoltage());
+
+    if(joystick_0.getRawButton(Buttons.shoot_button_far)){
+      shooter_speed=frontSpeedNT.getDouble(0);
+      shooter_back_speed=backSpeedNT.getDouble(0);
+      frontReadyNT.setBoolean(shooter.is_ready(shooter.get_vel_threshold(true)));
+      backReadyNT.setBoolean(shooter_back.is_ready(shooter_back.get_vel_threshold(false)));
+      if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+      shooter_back.is_ready(shooter_back.get_vel_threshold(false))){//If back is at desired velocity
+        conveyor_speed=Speeds.conveyor_shoot_speed;
+        manual_conveyor=true;
+      }else{
+        conveyor_speed=0;
+        manual_conveyor=false;
+      }
+      manual_shooter=true;
+    }
   }
 }
