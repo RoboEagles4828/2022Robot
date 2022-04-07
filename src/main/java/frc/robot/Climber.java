@@ -39,11 +39,11 @@ public class Climber {
     }
 
     public double get_left_pos(){
-        return left.getSelectedSensorPosition();
+        return Math.abs(left.getSelectedSensorPosition());
     }
 
     public double get_right_pos(){
-        return right.getSelectedSensorPosition();
+        return Math.abs(right.getSelectedSensorPosition());
     }
 
     public void reset_pos(){
