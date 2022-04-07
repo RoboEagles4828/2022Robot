@@ -40,4 +40,10 @@ public class Distances {
     public static double spacing = 26;
 
     public static double turning_error = 15;//15 for 0.4, 5 for 0.3
+
+    public static double limelight_threshold = .0037;
+
+    public static double limelight_kP = 0;
+    public static double limelight_kI = 0;
+    public static double limelight_kD = 0;
 }

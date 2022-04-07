@@ -82,7 +82,8 @@ public class Robot extends TimedRobot {
   int right_climber_pos = 0;
 
   NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight-roboeag");
-  Limelight limelight = new Limelight(table, 30);
+  double[] limelightPID = {Distances.limelight_kP, Distances.limelight_kI, Distances.limelight_kD};
+  Limelight limelight = new Limelight(table, limelightPID);
 
   DigitalInput prox_lower = new DigitalInput(Ports.proxy_lower);
   DigitalInput prox_upper = new DigitalInput(Ports.proxy_upper);
@@ -98,7 +99,6 @@ public class Robot extends TimedRobot {
   boolean climber_mode = false;
 
   AHRS navx = new AHRS();
-  double starting_angle = 0;
 
   static final String DefaultAuto = "Default";
   static final String DriveAuto = "Drive";
@@ -858,7 +858,7 @@ public class Robot extends TimedRobot {
 
       // Manual Limelight control
       if (joystick_0.getRawButton(Buttons.limelight_button)) {
-        zRotation=dt.get_raw_speeds(limelight.getAlignmentAdjustment());
+        zRotation=dt.get_raw_speeds(limelight.getAlignmentAdjustmentPID());
         limelight.setLEDState(3);
       }
 
