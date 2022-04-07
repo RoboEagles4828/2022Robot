@@ -15,10 +15,10 @@ public class Speeds {
 
     public static double manual_climber_speed_up = 0.8;
     public static double manual_climber_speed_down = 0.8;
-    public static double manual_left_climber_speed_up = 0.7;
-    public static double manual_left_climber_speed_down = 0.9;
-    public static double manual_right_climber_speed_up = 0.6;
-    public static double manual_right_climber_speed_down = 0.8;
+    public static double manual_left_climber_speed_up = 0.4; //0.7;
+    public static double manual_left_climber_speed_down = 0.4; //0.9;
+    public static double manual_right_climber_speed_up = 0.4; //0.6;
+    public static double manual_right_climber_speed_down = 0.4; //0.8;
 
     public static double auto_drive_speed = 0.6;
     public static double auto_intake_speed = 0.7;
