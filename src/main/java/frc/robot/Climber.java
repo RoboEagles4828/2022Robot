@@ -1,15 +1,18 @@
 package frc.robot;
 
-import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
+import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
+// import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import frc.robot.Constants.*;
 
 public class Climber {
-    public WPI_TalonSRX left;
-    public WPI_TalonSRX right;
+    public WPI_TalonFX left;
+    public WPI_TalonFX right;
 
     public Climber(){
-        left = new WPI_TalonSRX(Ports.left_climber_port);
-        right = new WPI_TalonSRX(Ports.right_climber_port);
+        left = new WPI_TalonFX(Ports.left_climber_port);
+        left.setInverted(true);
+        right = new WPI_TalonFX(Ports.right_climber_port);
+        right.setInverted(false);
     }
 
     public void set_speeds(double left_speed, double right_speed){
