@@ -368,7 +368,7 @@ public class Robot extends TimedRobot {
       case ThreeBall:
         switch(auto_state){
           case 0://Shoot
-            if(timer.get()<Times.wall_shoot_time){
+            if(timer.get()<Times.wall_shoot_time-1){
               shooter_speed=Speeds.shooter_volt_close;
               shooter_back_speed=Speeds.shooter_back_volt_close;
               manual_shooter=true;
@@ -462,8 +462,8 @@ public class Robot extends TimedRobot {
           case 9://Shoot
             shooter_speed=Speeds.shooter_volt_far;
             shooter_back_speed=Speeds.shooter_back_volt_far;
-            if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
-            shooter_back.is_ready(shooter_back.get_vel_threshold(false))){
+            if(shooter.is_ready()&&//If front is at desired velocity
+            shooter_back.is_ready()){
               conveyor_speed=Speeds.conveyor_shoot_speed;
               manual_conveyor=true;
             }

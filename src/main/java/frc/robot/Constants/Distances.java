@@ -28,7 +28,7 @@ public class Distances {
     public static double bot_ball_to_ball = 110;
     public static double ball_to_ball_angle = 103;
     public static double ball_to_goal_angle = 57;
-    public static double sec_ball_to_goal = 60;
+    public static double sec_ball_to_goal = 40;
 
 
     public static double ball_to_wall = 52;//Distance from ball to wall
@@ -39,6 +39,6 @@ public class Distances {
     public static double turning_error = 15;//15 for 0.4, 5 for 0.3
 
     public static double mid_climb = 300000;//60.25inch
-    public static double low_climb = 225000;//48.75inch
+    public static double low_climb = 240000;//48.75inch
     public static double down_dist = 30000;
 }
