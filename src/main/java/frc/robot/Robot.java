@@ -56,7 +56,7 @@ public class Robot extends TimedRobot {
   boolean right_can_climb_down=true;
   boolean left_going_up = true; //is it going up
   boolean right_going_up = true;
-  boolean override_climber = true;
+  boolean override_climber = false;
   boolean left_can_climb = true;
   boolean right_can_climb = true;
   int state = 0;// 0 is both, 1 is left, 2 is right
@@ -808,7 +808,7 @@ public class Robot extends TimedRobot {
     if (climber_mode) {
       if(!override_climber){
         if (joystick_0.getRawButton(Buttons.manual_left_climber_button)) {
-          if (climber.get_left_pos()<Distances.mid_climb) {
+          if (climber.get_left_pos()<Distances.low_climb) {
             left_climber_speed = Speeds.manual_left_climber_speed_up;
           } else {
             left_climber_speed = 0;
@@ -1000,10 +1000,10 @@ public class Robot extends TimedRobot {
     } else if (state == 2) {
       climber.set_speeds(0, right_climber_speed);
     }
-    System.out.println("Left Pos: "+climber.get_left_pos());
-    System.out.println("Right Pos:"+ climber.get_right_pos());
-    System.out.println("Climber mode: "+ climber_mode);
-    System.out.println("Left Speed: "+left_climber_speed);
+    // System.out.println("Left Pos: "+climber.get_left_pos());
+    // System.out.println("Right Pos:"+ climber.get_right_pos());
+    // System.out.println("Climber mode: "+ climber_mode);
+    // System.out.println("Left Speed: "+left_climber_speed);
     System.out.println("Override: "+override_climber);
     /*
     String state_name = "";
