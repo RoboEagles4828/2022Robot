@@ -5,6 +5,7 @@
 package frc.robot;
 
 
+import com.ctre.phoenix.led.CANdle.LEDStripType;
 import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.cameraserver.CameraServer;
@@ -13,6 +14,7 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.motorcontrol.Spark;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.shuffleboard.*;
@@ -72,8 +74,8 @@ public class Robot extends TimedRobot {
   DigitalInput hall_right = new DigitalInput(Ports.hall_right);
   AnalogInput drive_train_speed = new AnalogInput(Ports.drive_train_speed_port);
   Servo intake_servo = new Servo(Ports.intake_servo_port);
-  PWM shooter_servo_0 = new PWM(Ports.shooter_servo_0_port);
-  PWM shooter_servo_1 = new PWM(Ports.shooter_servo_1_port);
+  Spark led = new Spark(1);
+  double led_state = 0;
 
   Joystick joystick_0 = new Joystick(Ports.joystick_0_port);
   Joystick joystick_1 = new Joystick(Ports.joystick_1_port);
@@ -139,7 +141,7 @@ public class Robot extends TimedRobot {
     backVelNT=Shuffleboard.getTab("Shooter").add("Back Shooter Velocity", 0).getEntry();
     frontReadyNT=Shuffleboard.getTab("Shooter").add("Front Ready", false).getEntry();
     backReadyNT=Shuffleboard.getTab("Shooter").add("Back Ready", false).getEntry();
-    CameraServer.startAutomaticCapture();
+    // CameraServer.startAutomaticCapture();
     //CameraServer.startAutomaticCapture();//Call twice to automatically create both cameras and have them as optional displays
     limelight.setLEDState(3);
   }
@@ -368,13 +370,14 @@ public class Robot extends TimedRobot {
       case ThreeBall:
         switch(auto_state){
           case 0://Shoot
-            if(timer.get()<Times.wall_shoot_time-1){
+            if(timer.get()<Times.wall_shoot_time-1){//If no encoder remove the -1
               shooter_speed=Speeds.shooter_volt_close;
               shooter_back_speed=Speeds.shooter_back_volt_close;
               manual_shooter=true;
               xSpeed=0;
-              if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
-              shooter_back.is_ready()){
+              //if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+              //shooter_back.is_ready()){
+              if(timer.get()>1){//If encoder is broken, us this and switch elsewhere
                 conveyor_speed=Speeds.conveyor_shoot_speed;
                 manual_conveyor=true;
               }
@@ -462,8 +465,9 @@ public class Robot extends TimedRobot {
           case 9://Shoot
             shooter_speed=Speeds.shooter_volt_far;
             shooter_back_speed=Speeds.shooter_back_volt_far;
-            if(shooter.is_ready()&&//If front is at desired velocity
-            shooter_back.is_ready()){
+            //if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
+            //shooter_back.is_ready(shooter.get_vel_threshold(false))){
+            if(timer.get()-start_time>2){
               conveyor_speed=Speeds.conveyor_shoot_speed;
               manual_conveyor=true;
             }
@@ -537,6 +541,7 @@ public class Robot extends TimedRobot {
           manual_shooter=true;
           if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
           shooter_back.is_ready()){
+          //if(timer.get()>2){
             conveyor_speed=Speeds.conveyor_shoot_speed;
             manual_conveyor=true;
           }
@@ -557,6 +562,7 @@ public class Robot extends TimedRobot {
                 manual_shooter=true;
                 if(shooter.is_ready(shooter.get_vel_threshold(true))&&//If front is at desired velocity
                 shooter_back.is_ready()){
+                //if(timer.get()>2){//Uncomment if encoder is broken and comment out above if statement
                   conveyor_speed=Speeds.conveyor_shoot_speed;
                   manual_conveyor=true;
                 }
@@ -648,6 +654,9 @@ public class Robot extends TimedRobot {
     // If ball is detected by upper proxy stop conveyor
     if (!prox_upper.get() && !manual_shooter) {// Not upper because for some dumb reason the proxy is switched on robot
       conveyor_speed = 0;
+      led_state=0.59;
+    }else{
+      led_state=0.75;
     }
 
     if(!climber_mode){
@@ -806,37 +815,8 @@ public class Robot extends TimedRobot {
     }
     // Toggled buttons for climbing
     if (climber_mode) {
+      led_state=-0.99;
       if(!override_climber){
-        if (joystick_0.getRawButton(Buttons.manual_left_climber_button)) {
-          if (climber.get_left_pos()<Distances.low_climb) {
-            left_climber_speed = Speeds.manual_left_climber_speed_up;
-          } else {
-            left_climber_speed = 0;
-          }
-          state = 1;
-        }
-  
-        // Stop left climber when not manually controlled
-        if (joystick_0.getRawButtonReleased(Buttons.manual_left_climber_button)) {
-          left_climber_speed = 0;
-          state = 1;
-        }
-
-        
-        if (joystick_0.getRawButton(Buttons.manual_rev_left_climber_button)) {
-          if(climber.get_left_pos()>Distances.down_dist){
-            left_climber_speed = -Speeds.manual_left_climber_speed_down;
-            left_can_climb = true;
-          }
-          state=1;
-        }
-
-        // Stop left climber when not manually controlled backwards
-        if (joystick_0.getRawButtonReleased(Buttons.manual_rev_left_climber_button)) {
-          left_climber_speed = 0;
-          state = 1;
-        }
-
         if (joystick_0.getRawButton(Buttons.manual_climber_button)) {
           if (climber.get_left_pos()<Distances.mid_climb) {
             left_climber_speed = Speeds.manual_left_climber_speed_up;
@@ -992,6 +972,7 @@ public class Robot extends TimedRobot {
     shooter_back.set_voltage(shooter_back_speed);
     conveyor.set_speed(conveyor_speed);
     intake.set_speed(intake_speed);
+    led.set(led_state);
 
     if (state == 0) {
       climber.set_speeds(left_climber_speed, right_climber_speed);
@@ -1064,6 +1045,18 @@ public class Robot extends TimedRobot {
         manual_conveyor=false;
       }
       manual_shooter=true;
+      led.set(0.59);
+    }
+
+    if (joystick_0.getRawButtonReleased(Buttons.shoot_button_far)) {
+      frontReadyNT.setBoolean(shooter.reset_is_ready());
+      backReadyNT.setBoolean(shooter_back.reset_is_ready());
+      manual_shooter = false;
+      manual_conveyor = false;
+      shooter_speed = 0;
+      shooter_back_speed=0;
+      conveyor_speed = 0;
+      led.set(0.73);
     }
   }
 }

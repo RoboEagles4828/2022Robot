@@ -28,7 +28,7 @@ public class Distances {
     public static double bot_ball_to_ball = 110;
     public static double ball_to_ball_angle = 103;
     public static double ball_to_goal_angle = 57;
-    public static double sec_ball_to_goal = 40;
+    public static double sec_ball_to_goal = 60;
 
 
     public static double ball_to_wall = 52;//Distance from ball to wall
